@@ -1,0 +1,22 @@
+---
+import Icon from './Icon.astro';
+import { profile } from '../data/profile';
+import { withBase } from '../lib/url';
+---
+
+<footer class="site-footer">
+  <div class="scroll-end" aria-hidden="true"></div>
+  <div class="wrap">
+    <div>
+      <p>Francisco Mateus · Application Specialist · AI and Master Data.</p>
+      <p>No cookies, no analytics, no third-party scripts.</p>
+    </div>
+    <ul class="footer-links">
+      <li><a href={`mailto:${profile.email}`}><Icon name="mail" />{profile.email}</a></li>
+      <li><a href={profile.linkedin} target="_blank" rel="noopener noreferrer"><Icon name="linkedin" />LinkedIn<span class="sr-only new-tab-note"> (opens in a new tab)</span></a></li>
+      <li><a href={profile.github} target="_blank" rel="noopener noreferrer"><Icon name="github" />GitHub<span class="sr-only new-tab-note"> (opens in a new tab)</span></a></li>
+      <li><a href={withBase('/Francisco_Mateus_CV.pdf')} download><Icon name="file" />CV (PDF)</a></li>
+    </ul>
+    <p>© {new Date().getFullYear()} Francisco Mateus</p>
+  </div>
+</footer>

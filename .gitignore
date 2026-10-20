@@ -1,0 +1,39 @@
+node_modules/
+dist/
+.astro/
+.cache/
+.env
+.env.*
+!.env.example
+
+# Python tooling used by scripts/check-browser.py (run through uv)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Build leftovers: npm run cv writes public/Francisco_Mateus_CV.pdf.tmp and only removes
+# it on the paths it controls, so an interrupted run leaves one behind.
+*.tmp
+*.log
+npm-debug.log*
+
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor state
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Merge leftovers
+*.orig
+*.rej
+
+# Local working notes: kept on disk for agents, never published.
+AGENTS.md
+HANDOVER.md

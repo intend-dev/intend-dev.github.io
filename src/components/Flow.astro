@@ -1,0 +1,16 @@
+---
+interface Props {
+  steps: { label: string; note?: string }[];
+}
+
+const { steps } = Astro.props;
+---
+
+<ol class="flow">
+  {steps.map((step) => (
+    <li>
+      <span class="flow-label">{step.label}</span>
+      {step.note && <span class="flow-note">{step.note}</span>}
+    </li>
+  ))}
+</ol>

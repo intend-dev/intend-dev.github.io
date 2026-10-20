@@ -1,0 +1,9 @@
+{
+  "windowsRoots": ["ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA"],
+  "win32": [
+    "Google/Chrome/Application/chrome.exe",
+    "Microsoft/Edge/Application/msedge.exe"
+  ],
+  "darwin": ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"],
+  "linux": ["google-chrome", "chromium", "chromium-browser"]
+}

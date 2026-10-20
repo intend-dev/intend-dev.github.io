@@ -1,0 +1,32 @@
+{
+  "name": "francisco-mateus-portfolio",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "sync:cv": "node scripts/sync-cv.mjs",
+    "check:cv-sync": "node scripts/sync-cv.mjs --check",
+    "test:cv": "node --test scripts/sync-cv.test.mjs",
+    "cv": "node scripts/build-cv.mjs",
+    "check:links": "node scripts/check-links.mjs",
+    "check:facts": "node scripts/check-facts.mjs",
+    "check:html": "node scripts/check-html.mjs",
+    "check:css": "node scripts/check-css.mjs",
+    "check:seo": "node scripts/check-seo.mjs",
+    "check:pdf": "uv run scripts/check-pdf.py",
+    "check:all": "npm run check && npm run test:cv && npm run check:cv-sync && npm run build && npm run check:links && npm run check:html && npm run check:css && npm run check:seo && npm run check:facts && npm run check:pdf && npm run check:browser",
+    "check:browser": "uv run scripts/check-browser.py"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.7.4",
+    "astro": "^7.4.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "typescript": "~6.0.0"
+  }
+}

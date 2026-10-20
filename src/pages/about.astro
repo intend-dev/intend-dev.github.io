@@ -1,0 +1,10 @@
+---
+import RedirectPage from '../components/RedirectPage.astro';
+import { withBase } from '../lib/url';
+---
+
+<RedirectPage
+  title="About moved · Francisco Mateus"
+  target={withBase('/#about')}
+  message="About is on the overview page."
+/>

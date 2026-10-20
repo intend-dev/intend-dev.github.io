@@ -1,0 +1,100 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Icon from '../components/Icon.astro';
+import { profile } from '../data/profile';
+import { cvProjects, cvSummary, education, experience, skillGroups } from '../data/career';
+import { withBase } from '../lib/url';
+import copy from '../data/copy.json';
+
+const linkedinLabel = profile.linkedin.replace(/^https?:\/\/(?:www\.)?/, '').replace(/\/$/, '');
+const githubLabel = profile.github.replace(/^https?:\/\/(?:www\.)?/, '').replace(/\/$/, '');
+const workUrl = new URL(withBase('/#work'), Astro.site).toString().replace(/^https?:\/\//, '');
+const siteUrl = new URL(withBase('/'), Astro.site).toString();
+const siteLabel = new URL(siteUrl).host;
+---
+
+<BaseLayout title="CV · Francisco Mateus" description="CV of Francisco Mateus, Application Specialist · AI and Master Data." noindex>
+  <div class="wrap cv-page">
+    <div class="cv-header">
+      <h1 class="cv-name">{profile.name}</h1>
+      <p class="cv-title">{profile.cvTitle}</p>
+      <p class="cv-contact">
+        <span>{profile.location}</span>
+        <a href={`mailto:${profile.email}`}><Icon name="mail" />{profile.email}</a>
+        <a href={profile.linkedin}><Icon name="linkedin" />{linkedinLabel}</a>
+        <a href={profile.github}><Icon name="github" />{githubLabel}</a>
+        <a href={siteUrl}><Icon name="globe" />{siteLabel}</a>
+      </p>
+    </div>
+
+    <div class="cv-actions no-print">
+      <a class="button button--solid" href={withBase('/Francisco_Mateus_CV.pdf')} download>Download PDF</a>
+      <a class="button" href={`mailto:${profile.email}`}>Email me</a>
+    </div>
+
+    <section class="cv-section">
+      <h2>{copy.cv.summary}</h2>
+      <p>{cvSummary}</p>
+    </section>
+
+    <section class="cv-section">
+      <h2>{copy.sections.experience}</h2>
+      {experience.map((role) => (
+        <article class="cv-entry">
+          <div class="entry-head">
+            <div>
+              <h3>{role.role}</h3>
+              <p class="role">{role.company}{'location' in role && role.location ? `, ${role.location}` : ''}</p>
+            </div>
+            <span class="period">{role.period}</span>
+          </div>
+          <ul>
+            {role.bullets.map((bullet) => <li>{bullet}</li>)}
+          </ul>
+        </article>
+      ))}
+    </section>
+
+    <section class="cv-section">
+      <div class="section-head">
+        <h2>{copy.cv.projects}</h2>
+        <span class="section-link">Additional Case Studies: <a href={withBase('/#work')}>{workUrl}</a></span>
+      </div>
+      {cvProjects.map((project) => (
+        <div class="cv-project">
+          <h3>{project.name}</h3>
+          <p>{project.summary}</p>
+          <ul>
+            {project.bullets.map((bullet) => <li>{bullet}</li>)}
+          </ul>
+        </div>
+      ))}
+      <p class="cv-note">{copy.cv.projectsNote}</p>
+    </section>
+
+    <section class="cv-section">
+      <div class="section-head">
+        <h2>{copy.sections.skills}</h2>
+        <a class="section-link" href="https://www.linkedin.com/in/franc1scomat/details/certifications/" target="_blank" rel="noopener noreferrer">Full certification list on <span class="link-word">LinkedIn</span><span class="sr-only new-tab-note"> (opens in a new tab)</span></a>
+      </div>
+      {skillGroups.map((group) => (
+        <div class="skill-group">
+          <h3>{group.name}</h3>
+          <p>{group.skills}</p>
+        </div>
+      ))}
+    </section>
+
+    <section class="cv-section">
+      <h2>{copy.sections.education}</h2>
+      {education.map((entry) => (
+        <article class="cv-entry">
+          <h3>{entry.institution}</h3>
+          <p class="role">{entry.credential}</p>
+          {'detail' in entry && entry.detail && <p>{entry.detail}</p>}
+        </article>
+      ))}
+    </section>
+
+  </div>
+</BaseLayout>

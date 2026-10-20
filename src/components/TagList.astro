@@ -1,0 +1,18 @@
+---
+interface Props {
+  items: readonly string[];
+  /**
+   * `list` renders a <ul>; `inline` renders spans, for places where flow content is
+   * invalid, such as the phrasing-only content model of a <summary>.
+   */
+  variant?: 'list' | 'inline';
+}
+
+const { items, variant = 'list' } = Astro.props;
+---
+
+{variant === 'inline' ? (
+  <span class="tags">{items.map((item) => <span class="tag">{item}</span>)}</span>
+) : (
+  <ul class="tags">{items.map((item) => <li>{item}</li>)}</ul>
+)}

@@ -1,0 +1,137 @@
+---
+import ThemeToggle from './ThemeToggle.astro';
+import { withBase } from '../lib/url';
+import copy from '../data/copy.json';
+---
+
+<div class="scroll-sentinel" aria-hidden="true"></div>
+
+<!-- data-nav gives the breadcrumb its Work label. -->
+<header class="site-header" data-nav={JSON.stringify(copy.nav)}>
+  <div class="wrap">
+    <a class="wordmark" href={withBase('/')}>Francisco Mateus</a>
+    <div class="header-actions">
+      <div class="header-work">
+        <nav class="site-nav" aria-label="Primary">
+          <a href={withBase('/#work')}>{copy.nav.work}</a>
+          <a href={withBase('/#about')}>{copy.sections.about}</a>
+          <a href={withBase('/#contact')}>{copy.sections.contact}</a>
+        </nav>
+        <!-- Breadcrumb for the Work area. Absolute, so the bar keeps one height. -->
+        <span class="nav-current" aria-hidden="true" hidden></span>
+      </div>
+      <ThemeToggle />
+    </div>
+  </div>
+</header>
+
+<script is:inline>
+  (() => {
+    const header = document.querySelector('.site-header');
+    if (!header) return;
+    const navLabels = JSON.parse(header.dataset.nav || '{}');
+
+    const sync = () => {
+      const height = Math.round(header.getBoundingClientRect().height);
+      if (height > 0) document.documentElement.style.setProperty('--header-h', `${height}px`);
+    };
+
+    sync();
+    window.addEventListener('resize', sync);
+    if ('ResizeObserver' in window) new ResizeObserver(sync).observe(header);
+    if (document.fonts) document.fonts.ready.then(sync);
+
+    const sentinel = document.querySelector('.scroll-sentinel');
+    if (sentinel && 'IntersectionObserver' in window) {
+      new IntersectionObserver(([entry]) => {
+        header.toggleAttribute('data-scrolled', !entry.isIntersecting);
+      }).observe(sentinel);
+    }
+
+    // Section tracking: name the last section whose top passed the reading horizon.
+    // The label names the section in the header; the work subcategories hang under
+    // the Work link. About and Contact have their own underlined link, so they stay
+    // unnamed here instead of saying the same word twice.
+    // This script runs before <main>, so the sections are resolved after parsing.
+    const trackSections = () => {
+      const label = document.querySelector('.nav-current');
+      if (!label) return;
+
+      const inlineCases = [...document.querySelectorAll('[data-nav-label]')]
+        .sort((a, b) => Number(a.dataset.navOrder) - Number(b.dataset.navOrder))
+        .map((element) => ({ id: element.id, crumb: `Work / ${element.dataset.navLabel}`, nav: 'work' }));
+
+      // The breadcrumb states the hierarchy instead of implying it: only Work keeps a
+      // label, and it reads "Work / <sub-section>".
+      const sections = [
+        { id: 'overview', crumb: null },
+        { id: 'work', crumb: `Work / ${navLabels.caseStudies}`, nav: 'work' },
+        ...inlineCases,
+        { id: 'capabilities', crumb: null },
+        { id: 'about', crumb: null, nav: 'about' },
+        { id: 'contact', crumb: null, nav: 'contact' },
+      ]
+        .map((section) => ({ ...section, element: document.getElementById(section.id) }))
+        .filter(({ element }) => element);
+
+      if (sections.length === 0) return;
+
+      const links = new Map();
+      for (const link of document.querySelectorAll('.site-nav a')) {
+        const hash = (link.getAttribute('href') || '').split('#')[1];
+        if (hash) links.set(hash, link);
+      }
+
+      let atEnd = false;
+
+      const update = () => {
+        const height = header.getBoundingClientRect().height;
+        const horizon = window.scrollY + height + 24;
+        // A closed case-study disclosure has no body in flow, so it cannot name the
+        // current section; only an opened one counts.
+        const active = sections.filter(
+          (section) => section.element.tagName !== 'DETAILS' || section.element.open,
+        );
+        let current = active[0];
+        for (const section of active) {
+          if (section.element.getBoundingClientRect().top + window.scrollY <= horizon) current = section;
+        }
+        // A short final section can sit below the horizon on a tall viewport.
+        if (atEnd) current = active[active.length - 1];
+        label.textContent = current.crumb ?? '';
+        label.hidden = !current.crumb;
+        for (const [target, link] of links) {
+          if (link.getAttribute('aria-current') === 'page') continue;
+          if (current.nav && target === current.nav) link.setAttribute('aria-current', 'location');
+          else link.removeAttribute('aria-current');
+        }
+      };
+
+      let pending = false;
+      const schedule = () => {
+        if (pending) return;
+        pending = true;
+        requestAnimationFrame(() => {
+          pending = false;
+          update();
+        });
+      };
+
+      window.addEventListener('scroll', schedule, { passive: true });
+      window.addEventListener('resize', schedule);
+      update();
+      if (document.fonts) document.fonts.ready.then(update);
+
+      const end = document.querySelector('.scroll-end');
+      if (end && 'IntersectionObserver' in window) {
+        new IntersectionObserver(([entry]) => {
+          atEnd = entry.isIntersecting && document.documentElement.scrollHeight > innerHeight + 2;
+          update();
+        }).observe(end);
+      }
+    };
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', trackSections);
+    else trackSections();
+  })();
+</script>
