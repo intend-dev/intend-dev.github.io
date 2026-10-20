@@ -1,0 +1,102 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Check
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run check:all 2>&1 | tee check.log
+
+      # Workflow logs need a signed-in session, so a red run otherwise says only
+      # "exit code 1". Copy the tail of the output into annotations, which are public.
+      - name: Surface the failing check
+        if: failure()
+        shell: bash
+        run: |
+          tail -n 8 check.log | while IFS= read -r line; do
+            echo "::error title=check:all::$line"
+          done
+
+  build:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Build
+        uses: withastro/action@v6
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v5
+
+      # deploy-pages reports only page_url, and its failure message lives in the
+      # deployment statuses, which the job log hides behind a sign-in. Echo the
+      # statuses into annotations so a red deploy says why.
+      - name: Report the Pages deployment status
+        if: failure()
+        continue-on-error: true
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          API: ${{ github.api_url }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -o pipefail
+          id=$(curl -fsS "$API/repos/$REPO/deployments?sha=$SHA&environment=github-pages&per_page=1" |
+            jq -r '.[0].id // empty')
+          echo "deployment id: ${id:-none}"
+          if [ -n "$id" ]; then
+            curl -fsS "$API/repos/$REPO/deployments/$id/statuses" |
+              jq -r '.[] | "status \(.state): \(.description // "(no description)")"' |
+              while IFS= read -r line; do echo "::error title=pages deploy::$line"; done
+          fi
+          # The deployment status often carries an empty description; the Pages build
+          # record holds the API-side error when there is one. Read needs pages: read,
+          # which the job's pages: write covers.
+          curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "$API/repos/$REPO/pages/builds/latest" |
+            jq -r '"build \(.status): \(.error.message // "(no error message)")"' |
+            while IFS= read -r line; do echo "::error title=pages deploy::$line"; done || true

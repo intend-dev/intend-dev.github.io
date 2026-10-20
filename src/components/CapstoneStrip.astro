@@ -1,0 +1,14 @@
+---
+// Parked while the capstones are drafts: the component, the chip styles and
+// `src/data/capstone.ts` are kept so the section can return once an artefact exists.
+// Re-render it in `index.astro` and restore the chip assertions from git history.
+import { capstoneNames, capstoneRepoBase, capstoneRepos } from '../data/capstone';
+---
+
+<ul class="chips" id="capstone-chips">
+  {capstoneRepos.map((repo) => (
+    <li>
+      <a href={`${capstoneRepoBase}${repo}`} target="_blank" rel="noopener noreferrer">{capstoneNames[repo]}<span class="sr-only new-tab-note"> (opens in a new tab)</span></a>
+    </li>
+  ))}
+</ul>

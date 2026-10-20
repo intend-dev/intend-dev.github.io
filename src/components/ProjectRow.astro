@@ -1,0 +1,38 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import CaseStudyBody from './CaseStudyBody.astro';
+import TagList from './TagList.astro';
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+  html: string;
+}
+
+const { project, html } = Astro.props;
+const number = String(project.data.order).padStart(2, '0');
+---
+
+<li class="project-row">
+  <details
+    id={`case-${project.id}`}
+    class="case-disclosure"
+    data-nav-label={`Case study ${number}`}
+    data-nav-order={number}
+  >
+    <summary>
+      <!-- summary allows phrasing content plus a heading, so every child here is a
+           span, the chips included; the full stack is listed again in the opened
+           study's sidebar, which is why this copy is hidden from assistive tech. -->
+      <span class="row-inner">
+        <span class="order" aria-hidden="true">{number}</span>
+        <h3 class="project-title">{project.data.title}</h3>
+        <span class="arrow" aria-hidden="true">→</span>
+        <span class="summary">{project.data.summary}</span>
+        <span class="row-tags" aria-hidden="true"><TagList items={project.data.stack} variant="inline" /></span>
+      </span>
+    </summary>
+    <div class="row-body">
+      <CaseStudyBody project={project} html={html} idPrefix={`case-${project.id}-`} />
+    </div>
+  </details>
+</li>

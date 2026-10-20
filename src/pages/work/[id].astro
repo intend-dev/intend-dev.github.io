@@ -1,0 +1,22 @@
+---
+import { getCollection } from 'astro:content';
+import RedirectPage from '../../components/RedirectPage.astro';
+import { withBase } from '../../lib/url';
+
+export async function getStaticPaths() {
+  const projects = await getCollection('projects', ({ data }) => data.status === 'completed' && !data.draft);
+
+  return projects.map((project) => ({
+    params: { id: project.id },
+    props: { target: withBase(`/#case-${project.id}`) },
+  }));
+}
+
+const { target } = Astro.props;
+---
+
+<RedirectPage
+  title="Case study moved · Francisco Mateus"
+  target={target}
+  message="This case study is on the overview page."
+/>

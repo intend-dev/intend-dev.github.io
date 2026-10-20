@@ -1,0 +1,40 @@
+---
+import Icon from './Icon.astro';
+---
+
+<button type="button" class="theme-toggle" aria-label="Switch to dark theme" data-theme-toggle hidden>
+  <Icon name="sun" class="theme-icon theme-icon-sun" />
+  <Icon name="moon" class="theme-icon theme-icon-moon" />
+</button>
+
+<script is:inline>
+  (() => {
+    const button = document.querySelector('[data-theme-toggle]');
+    if (!button) return;
+    button.hidden = false;
+    const root = document.documentElement;
+
+    // The label names the action, and the visible icon matches it: a moon in the light
+    // theme, a sun in the dark one. aria-pressed is deliberately absent, because a label
+    // that already says "switch to dark" would then contradict the pressed state.
+    const sync = () => {
+      const dark = root.dataset.theme === 'dark';
+      button.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+      const colour = root.dataset[dark ? 'themeDark' : 'themeLight'];
+      for (const meta of document.querySelectorAll('meta[name="theme-color"]')) meta.content = colour;
+    };
+
+    sync();
+
+    button.addEventListener('click', () => {
+      const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+      root.dataset.theme = next;
+      try {
+        localStorage.setItem('theme', next);
+      } catch (error) {
+        // Storage can be unavailable; the session still switches.
+      }
+      sync();
+    });
+  })();
+</script>

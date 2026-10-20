@@ -1,0 +1,308 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SectionHeading from '../components/SectionHeading.astro';
+import ProjectRow from '../components/ProjectRow.astro';
+import ContactLinks from '../components/ContactLinks.astro';
+import Fact from '../components/Fact.astro';
+import { profile } from '../data/profile';
+import { certifications, education, experience, skillGroups } from '../data/career';
+import { withBase } from '../lib/url';
+import copy from '../data/copy.json';
+
+const projects = (await getCollection('projects', ({ data }) => data.status === 'completed' && !data.draft)).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+
+// Each of the six case-study rows opens its full study in place, so a click never leaves
+// the page. The Markdown sections are h2 in the source; they sit two levels down here so
+// the outline stays valid beneath each row's h3 title, and their ids get a per-study
+// prefix so all six can share one document.
+const inlineCases = projects.map((project) => ({
+  project,
+  html: (project.rendered?.html ?? '')
+    .replace(/<(\/?)h([23])\b/g, (_, close, level) => `<${close}h${Number(level) + 2}`)
+    .replace(/\sid="([^"]*)"/g, (_, id) => ` id="case-${project.id}-${id}"`)
+    .replace(/href="#([^"]*)"/g, (_, id) => `href="#case-${project.id}-${id}"`),
+}));
+
+const countBy = (issuer: string) => certifications.filter((certification) => certification.issuer === issuer).length;
+const certCounts = `${countBy('Udacity Institute of AI & Technology')} Udacity AI · ${countBy('Stibo Systems')} Stibo Systems · ${countBy('ServiceNow')} ServiceNow expired · ${countBy('PeopleCert')} ITIL v4`;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: profile.name,
+  jobTitle: profile.role.replace(' · ', ', '),
+  email: profile.email,
+  url: new URL(withBase('/'), Astro.site).toString(),
+  sameAs: [profile.linkedin, profile.github],
+  worksFor: { '@type': 'Organization', name: profile.employer },
+  address: {
+    '@type': 'PostalAddress',
+    addressLocality: profile.location.split(',')[0],
+    addressCountry: profile.countryCode,
+  },
+  knowsAbout: [
+    'Retrieval-augmented generation',
+    'AI agents',
+    'Model Context Protocol',
+    'Agentic AI',
+    'LangGraph',
+    'LLM evaluation',
+    'Stibo STEP',
+    'Master data management',
+    'Product information management',
+    'Python',
+    'PyTorch',
+  ],
+};
+
+const capabilities = [
+  {
+    title: 'AI systems',
+    body: 'Retrieval-augmented generation, agents over MCP, tool-using systems, and the evaluation loops that keep them honest.',
+  },
+  {
+    title: 'Evaluation and governance',
+    body: 'RAGAS and retrieval metrics, fairness audits, model cards, token and time budgets, and traces that make a run reproducible.',
+  },
+  {
+    title: 'Master data',
+    body: 'Stibo STEP, PIM and MDM, business rules, workflows, data modelling, and release packaging across DEV, TEST, and PROD.',
+  },
+];
+---
+
+<BaseLayout
+  title="Francisco Mateus · Application Specialist, AI and Master Data"
+  description="Portfolio of Francisco Mateus: application specialist for AI systems and master data, working on RAG, AI agents, evaluation, and Stibo STEP."
+  jsonLd={jsonLd}
+>
+  <section class="hero" id="overview">
+    <div class="wrap">
+      <p class="eyebrow">APPLICATION SPECIALIST · AI AND MASTER DATA</p>
+      <h1>{profile.headline}</h1>
+      <p class="intro">{profile.intro}</p>
+      <div class="actions">
+        <a class="button button--solid" href={withBase('/#work')}>Read the case studies</a>
+        <a class="button" href={withBase('/Francisco_Mateus_CV.pdf')} download>Download CV</a>
+      </div>
+      <p class="availability">{profile.availability}</p>
+    </div>
+  </section>
+
+  <section class="section" id="work">
+    <div class="wrap">
+      <SectionHeading title={copy.sections.caseStudies} note="Architecture, evaluation evidence, what broke and how it was fixed" />
+      <ul class="project-list">
+        {inlineCases.map(({ project, html }) => <ProjectRow project={project} html={html} />)}
+      </ul>
+
+      <p class="disclosure">
+        The AI projects are private coursework repositories. Each write-up documents the architecture, the evidence, and the
+        failure that changed the build. I can walk through the implementation in an interview.
+      </p>
+    </div>
+  </section>
+
+  <!-- Fact section headings stay outside <summary>. A heading inside a summary becomes part of
+       the disclosure's accessible name and is announced twice by some screen readers. The
+       case-study rows are the exception: their title is the control's only visible label. -->
+  <section class="section" id="capabilities">
+    <div class="wrap">
+      <SectionHeading title={copy.sections.capabilities} note="AI systems, evaluation and governance, and master data." />
+      <div class="capabilities">
+        {capabilities.map((capability) => (
+          <div class="capability">
+            <h3>{capability.title}</h3>
+            <p>{capability.body}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="about">
+    <div class="wrap">
+      <SectionHeading eyebrow={copy.sections.about} title={copy.about.focus} />
+      <div class="facts">
+        <Fact id="experience" title={copy.sections.experience} note="Six roles across data, platforms, and support">
+          {experience.map((role) => (
+            <article class="cv-entry">
+              <div class="entry-head">
+                <div>
+                  <h4>{role.company}</h4>
+                  <p class="role">{role.role}</p>
+                  {'location' in role && role.location && <p class="location">{role.location}</p>}
+                </div>
+                <span class="period">{role.period}</span>
+              </div>
+              <ul>
+                {role.bullets.map((bullet) => <li>{bullet}</li>)}
+              </ul>
+            </article>
+          ))}
+        </Fact>
+
+        <Fact id="skills" title={copy.sections.skills} note="Five groups: AI and ML, AI engineering, data, Stibo, development">
+          {skillGroups.map((group) => (
+            <div class="skill-group">
+              <h4>{group.name}</h4>
+              <p>{group.skills}</p>
+            </div>
+          ))}
+        </Fact>
+
+        <Fact id="certifications" title={copy.sections.certifications} note={certCounts}>
+          <p class="cert-note">
+            ServiceNow dates are first-issued dates; all four were renewed periodically while active and are now expired.
+          </p>
+          <ul class="cert-list">
+            {certifications.map((certification) => (
+              <li>
+                <span>{certification.name}</span>
+                <span class="cert-meta">
+                  {certification.issuer} · {certification.date}
+                  {'status' in certification && certification.status ? ` · ${certification.status}` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p class="cert-more">
+            <a href="https://www.linkedin.com/in/franc1scomat/details/certifications/" target="_blank" rel="noopener noreferrer">Full certification list on LinkedIn<span class="sr-only new-tab-note"> (opens in a new tab)</span></a>
+          </p>
+        </Fact>
+
+        <Fact id="education" title={copy.sections.education}>
+          {education.map((entry) => (
+            <article class="cv-entry">
+              <h4>{entry.institution}</h4>
+              <p class="role">{entry.credential}</p>
+              {'detail' in entry && entry.detail && <p class="muted">{entry.detail}</p>}
+            </article>
+          ))}
+        </Fact>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="contact">
+    <div class="wrap">
+      <SectionHeading title={copy.sections.contact} note={profile.availability} />
+      <ContactLinks />
+    </div>
+  </section>
+
+  <script is:inline>
+  (() => {
+    const openHashTarget = () => {
+      const raw = location.hash.slice(1);
+      if (!raw) return;
+      let id;
+      try {
+        id = decodeURIComponent(raw);
+      } catch {
+        return;
+      }
+      const target = document.getElementById(id);
+      if (!target) return;
+      const details = target.closest('details');
+      if (details && !details.open) {
+        details.open = true;
+        // Let the opened body lay out before measuring the scroll target.
+        requestAnimationFrame(() => details.scrollIntoView({ block: 'start' }));
+      }
+    };
+
+    openHashTarget();
+    window.addEventListener('hashchange', openHashTarget);
+
+    // One case study at a time: opening a row closes the others, so the page keeps a
+    // single reading position. Printing deliberately opens every row, so this stands
+    // down while the print handlers run.
+    let printing = false;
+    const cases = [...document.querySelectorAll('.case-disclosure')];
+    for (const details of cases) {
+      details.addEventListener('toggle', () => {
+        if (printing || !details.open) return;
+        let switched = false;
+        for (const other of cases) {
+          if (other !== details && other.open) {
+            other.open = false;
+            switched = true;
+          }
+        }
+        // Closing the previous row removes its whole body above this one, so the
+        // clicked row would otherwise open already scrolled into the middle. Put its
+        // header back under the site header and start the body from the top.
+        if (switched) {
+          requestAnimationFrame(() => {
+            const head = document.querySelector('.site-header');
+            const offset = head ? head.getBoundingClientRect().height : 0;
+            const top = details.getBoundingClientRect().top + window.scrollY - offset;
+            window.scrollTo({ top, behavior: 'instant' });
+          });
+        }
+      });
+    }
+
+    // The open row header sticks under the site header, so the "At a glance" sidebar
+    // has to clear its measured height instead of a guessed one.
+    const syncRowHeads = () => {
+      for (const details of document.querySelectorAll('.case-disclosure[open]')) {
+        const summary = details.querySelector('summary');
+        if (summary) details.style.setProperty('--row-head-h', `${Math.round(summary.getBoundingClientRect().height)}px`);
+      }
+    };
+    for (const details of document.querySelectorAll('.case-disclosure')) {
+      details.addEventListener('toggle', syncRowHeads);
+    }
+    window.addEventListener('resize', syncRowHeads);
+    if (document.fonts) document.fonts.ready.then(syncRowHeads);
+
+    // The open row header paints its lower edge only while it is pinned under the site
+    // header. At rest that edge would sit a few pixels above the case-flow rule, and the
+    // pair reads as a doubled line; once pinned, the header covers scrolling text and
+    // needs a line to mark where the bar ends.
+    let stuckQueued = false;
+    const syncStuck = () => {
+      stuckQueued = false;
+      for (const summary of document.querySelectorAll('.case-disclosure > summary')) {
+        const offset = parseFloat(getComputedStyle(summary).top) || 0;
+        const pinned = summary.parentElement.open && summary.getBoundingClientRect().top <= offset + 0.5;
+        summary.toggleAttribute('data-stuck', pinned);
+      }
+    };
+    const queueStuck = () => {
+      if (stuckQueued) return;
+      stuckQueued = true;
+      requestAnimationFrame(syncStuck);
+    };
+    window.addEventListener('scroll', queueStuck, { passive: true });
+    window.addEventListener('resize', queueStuck);
+    for (const details of document.querySelectorAll('.case-disclosure')) {
+      details.addEventListener('toggle', queueStuck);
+    }
+    syncStuck();
+
+    // Only the blocks this run opened are closed again, so a block the visitor had
+    // open before printing is still open afterwards.
+    const printOpened = [];
+    window.addEventListener('beforeprint', () => {
+      printing = true;
+      document.querySelectorAll('details:not([open])').forEach((details) => {
+        details.open = true;
+        printOpened.push(details);
+      });
+    });
+    window.addEventListener('afterprint', () => {
+      printOpened.forEach((details) => {
+        details.open = false;
+      });
+      printOpened.length = 0;
+      printing = false;
+    });
+  })();
+</script>
+</BaseLayout>

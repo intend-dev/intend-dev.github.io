@@ -1,0 +1,63 @@
+---
+interface Props {
+  title: string;
+  description: string;
+  jsonLd?: Record<string, unknown>;
+  type?: 'website' | 'article';
+  noindex?: boolean;
+  canonicalPath?: string;
+}
+
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { withBase } from '../lib/url';
+import '../styles/global.css';
+
+const { title, description, jsonLd, type = 'website', noindex = false, canonicalPath } = Astro.props;
+const canonical = new URL(canonicalPath ?? Astro.url.pathname, Astro.site);
+---
+
+<!doctype html>
+<html lang="en" data-theme-light="#f7f4ed" data-theme-dark="#0c0e0d">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script is:inline>
+      let stored = null;
+      try {
+        stored = localStorage.getItem('theme');
+      } catch (error) {
+        // Storage can be blocked; fall back to the system preference.
+      }
+      const root = document.documentElement;
+      const dark = stored ? stored === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+      root.dataset.theme = dark ? 'dark' : 'light';
+      // Both metas take the active colour once JS runs; without JS the media queries above
+      // keep the browser chrome in step with the system preference.
+      const colour = root.dataset[dark ? 'themeDark' : 'themeLight'];
+      for (const meta of document.querySelectorAll('meta[name="theme-color"]')) meta.content = colour;
+    </script>
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <meta name="robots" content={noindex ? 'noindex, nofollow' : 'index, follow'} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content={type} />
+    <meta property="og:url" content={canonical} />
+    <meta name="twitter:card" content="summary" />
+    <meta name="theme-color" content="#f7f4ed" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0c0e0d" media="(prefers-color-scheme: dark)" />
+    <link rel="sitemap" href={withBase('/sitemap-index.xml')} />
+    <link rel="icon" href={withBase('/favicon.svg')} type="image/svg+xml" />
+    {jsonLd && <script type="application/ld+json" is:inline set:html={JSON.stringify(jsonLd)} />}
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <Header />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>
