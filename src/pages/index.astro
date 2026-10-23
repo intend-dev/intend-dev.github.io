@@ -1,10 +1,12 @@
 ---
 import { getCollection } from 'astro:content';
+import { Image } from 'astro:assets';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import SectionHeading from '../components/SectionHeading.astro';
-import ProjectRow from '../components/ProjectRow.astro';
+import CaseList from '../components/CaseList.astro';
 import ContactLinks from '../components/ContactLinks.astro';
 import Fact from '../components/Fact.astro';
+import portrait from '../assets/francisco-mateus.png';
 import { profile } from '../data/profile';
 import { certifications, education, experience, skillGroups } from '../data/career';
 import { withBase } from '../lib/url';
@@ -13,18 +15,8 @@ import copy from '../data/copy.json';
 const projects = (await getCollection('projects', ({ data }) => data.status === 'completed' && !data.draft)).sort(
   (a, b) => a.data.order - b.data.order,
 );
-
-// Each of the six case-study rows opens its full study in place, so a click never leaves
-// the page. The Markdown sections are h2 in the source; they sit two levels down here so
-// the outline stays valid beneath each row's h3 title, and their ids get a per-study
-// prefix so all six can share one document.
-const inlineCases = projects.map((project) => ({
-  project,
-  html: (project.rendered?.html ?? '')
-    .replace(/<(\/?)h([23])\b/g, (_, close, level) => `<${close}h${Number(level) + 2}`)
-    .replace(/\sid="([^"]*)"/g, (_, id) => ` id="case-${project.id}-${id}"`)
-    .replace(/href="#([^"]*)"/g, (_, id) => `href="#case-${project.id}-${id}"`),
-}));
+// The profile shows the first three studies; the full set of six lives on /work.
+const featured = projects.slice(0, 3);
 
 const countBy = (issuer: string) => certifications.filter((certification) => certification.issuer === issuer).length;
 const certCounts = `${countBy('Udacity Institute of AI & Technology')} Udacity AI · ${countBy('Stibo Systems')} Stibo Systems · ${countBy('ServiceNow')} ServiceNow expired · ${countBy('PeopleCert')} ITIL v4`;
@@ -61,7 +53,7 @@ const jsonLd = {
 const capabilities = [
   {
     title: 'AI systems',
-    body: 'Retrieval-augmented generation, agents over MCP, tool-using systems, and the evaluation loops that keep them honest.',
+    body: 'Retrieval-augmented generation (RAG), agents over MCP, tool-using systems, and the evaluation loops that keep them honest.',
   },
   {
     title: 'Evaluation and governance',
@@ -85,7 +77,7 @@ const capabilities = [
       <h1>{profile.headline}</h1>
       <p class="intro">{profile.intro}</p>
       <div class="actions">
-        <a class="button button--solid" href={withBase('/#work')}>Read the case studies</a>
+        <a class="button button--solid" href={withBase('/#work')}>Read example case studies</a>
         <a class="button" href={withBase('/Francisco_Mateus_CV.pdf')} download>Download CV</a>
       </div>
       <p class="availability">{profile.availability}</p>
@@ -94,15 +86,9 @@ const capabilities = [
 
   <section class="section" id="work">
     <div class="wrap">
-      <SectionHeading title={copy.sections.caseStudies} note="Architecture, evaluation evidence, what broke and how it was fixed" />
-      <ul class="project-list">
-        {inlineCases.map(({ project, html }) => <ProjectRow project={project} html={html} />)}
-      </ul>
-
-      <p class="disclosure">
-        The AI projects are private coursework repositories. Each write-up documents the architecture, the evidence, and the
-        failure that changed the build. I can walk through the implementation in an interview.
-      </p>
+      <SectionHeading title={copy.sections.caseStudies} note={copy.work.note} />
+      <CaseList projects={featured} navArea="examples" />
+      <p class="disclosure">{copy.work.disclosure}</p>
     </div>
   </section>
 
@@ -119,6 +105,24 @@ const capabilities = [
             <p>{capability.body}</p>
           </div>
         ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="story">
+    <div class="wrap">
+      <SectionHeading eyebrow={copy.story.eyebrow} title={copy.story.title} />
+      <div class="story">
+        <div class="story-text">
+          {copy.story.paragraphs.map((paragraph) => <p>{paragraph}</p>)}
+        </div>
+        <Image
+          src={portrait}
+          alt="Portrait of Francisco Mateus"
+          widths={[160, 320]}
+          sizes="(min-width: 900px) 10rem, 80vw"
+          class="story-portrait"
+        />
       </div>
     </div>
   </section>
@@ -193,116 +197,4 @@ const capabilities = [
       <ContactLinks />
     </div>
   </section>
-
-  <script is:inline>
-  (() => {
-    const openHashTarget = () => {
-      const raw = location.hash.slice(1);
-      if (!raw) return;
-      let id;
-      try {
-        id = decodeURIComponent(raw);
-      } catch {
-        return;
-      }
-      const target = document.getElementById(id);
-      if (!target) return;
-      const details = target.closest('details');
-      if (details && !details.open) {
-        details.open = true;
-        // Let the opened body lay out before measuring the scroll target.
-        requestAnimationFrame(() => details.scrollIntoView({ block: 'start' }));
-      }
-    };
-
-    openHashTarget();
-    window.addEventListener('hashchange', openHashTarget);
-
-    // One case study at a time: opening a row closes the others, so the page keeps a
-    // single reading position. Printing deliberately opens every row, so this stands
-    // down while the print handlers run.
-    let printing = false;
-    const cases = [...document.querySelectorAll('.case-disclosure')];
-    for (const details of cases) {
-      details.addEventListener('toggle', () => {
-        if (printing || !details.open) return;
-        let switched = false;
-        for (const other of cases) {
-          if (other !== details && other.open) {
-            other.open = false;
-            switched = true;
-          }
-        }
-        // Closing the previous row removes its whole body above this one, so the
-        // clicked row would otherwise open already scrolled into the middle. Put its
-        // header back under the site header and start the body from the top.
-        if (switched) {
-          requestAnimationFrame(() => {
-            const head = document.querySelector('.site-header');
-            const offset = head ? head.getBoundingClientRect().height : 0;
-            const top = details.getBoundingClientRect().top + window.scrollY - offset;
-            window.scrollTo({ top, behavior: 'instant' });
-          });
-        }
-      });
-    }
-
-    // The open row header sticks under the site header, so the "At a glance" sidebar
-    // has to clear its measured height instead of a guessed one.
-    const syncRowHeads = () => {
-      for (const details of document.querySelectorAll('.case-disclosure[open]')) {
-        const summary = details.querySelector('summary');
-        if (summary) details.style.setProperty('--row-head-h', `${Math.round(summary.getBoundingClientRect().height)}px`);
-      }
-    };
-    for (const details of document.querySelectorAll('.case-disclosure')) {
-      details.addEventListener('toggle', syncRowHeads);
-    }
-    window.addEventListener('resize', syncRowHeads);
-    if (document.fonts) document.fonts.ready.then(syncRowHeads);
-
-    // The open row header paints its lower edge only while it is pinned under the site
-    // header. At rest that edge would sit a few pixels above the case-flow rule, and the
-    // pair reads as a doubled line; once pinned, the header covers scrolling text and
-    // needs a line to mark where the bar ends.
-    let stuckQueued = false;
-    const syncStuck = () => {
-      stuckQueued = false;
-      for (const summary of document.querySelectorAll('.case-disclosure > summary')) {
-        const offset = parseFloat(getComputedStyle(summary).top) || 0;
-        const pinned = summary.parentElement.open && summary.getBoundingClientRect().top <= offset + 0.5;
-        summary.toggleAttribute('data-stuck', pinned);
-      }
-    };
-    const queueStuck = () => {
-      if (stuckQueued) return;
-      stuckQueued = true;
-      requestAnimationFrame(syncStuck);
-    };
-    window.addEventListener('scroll', queueStuck, { passive: true });
-    window.addEventListener('resize', queueStuck);
-    for (const details of document.querySelectorAll('.case-disclosure')) {
-      details.addEventListener('toggle', queueStuck);
-    }
-    syncStuck();
-
-    // Only the blocks this run opened are closed again, so a block the visitor had
-    // open before printing is still open afterwards.
-    const printOpened = [];
-    window.addEventListener('beforeprint', () => {
-      printing = true;
-      document.querySelectorAll('details:not([open])').forEach((details) => {
-        details.open = true;
-        printOpened.push(details);
-      });
-    });
-    window.addEventListener('afterprint', () => {
-      printOpened.forEach((details) => {
-        details.open = false;
-      });
-      printOpened.length = 0;
-      printing = false;
-    });
-  })();
-</script>
 </BaseLayout>

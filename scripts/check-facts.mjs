@@ -20,9 +20,24 @@ if (!existsSync(dist)) {
   process.exit(1);
 }
 
-const readPage = (relative) => stripHtml(requireText(join(dist, relative), relative));
-const home = readPage('index.html');
+const readRaw = (relative) => requireText(join(dist, relative), relative);
+const readPage = (relative) => stripHtml(readRaw(relative));
+const homeHtml = readRaw('index.html');
+const workHtml = readRaw('work/index.html');
+const home = stripHtml(homeHtml);
+const work = stripHtml(workHtml);
 const cv = readPage('cv/index.html');
+
+// The profile shows the first three studies; the work page shows all six. Counting the
+// rows is the outcome: a fourth study on the profile, or a missing one on the work
+// page, is a defect a visitor sees.
+const caseCount = (html) => (html.match(/class="case-disclosure"/g) ?? []).length;
+if (caseCount(homeHtml) !== 3) {
+  problems.push(`the profile shows ${caseCount(homeHtml)} case studies, expected the first 3`);
+}
+if (caseCount(workHtml) !== 6) {
+  problems.push(`the work page shows ${caseCount(workHtml)} case studies, expected all 6`);
+}
 
 // ---------------------------------------------------------------------------
 // Structure: runs everywhere, including CI, and needs nothing outside this repo.
@@ -73,7 +88,8 @@ for (const file of projectFiles) {
     if (!source.includes(`## ${section}`)) problems.push(`${file}: missing section ${section}`);
   }
 
-  if (title && !home.includes(title)) problems.push(`${file}: title missing from the overview`);
+  if (title && !work.includes(title)) problems.push(`${file}: title missing from the work page`);
+  if (title && order <= 3 && !home.includes(title)) problems.push(`${file}: featured title missing from the profile`);
 }
 
 if (problems.length > 0) {
@@ -158,7 +174,7 @@ for (const file of projectFiles) {
     problems.push(`${file}: courseProject not found in the career record`);
   }
   for (const token of projectTokens.get(order) ?? []) {
-    if (!home.includes(token)) problems.push(`${file}: record value ${token} missing from the overview`);
+    if (!work.includes(token)) problems.push(`${file}: record value ${token} missing from the work page`);
   }
 }
 

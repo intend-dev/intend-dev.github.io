@@ -10,10 +10,8 @@ export const experience = [
     "bullets": [
       "Stibo STEP developer and platform specialist across two Bosch divisions, Power Tools then Mobile Aftermarket.",
       "Lifted product-number accuracy across a region, sub-region, and country hierarchy by designing sales-channel and commodity-code exclusion logic, cutting misrouted assortment entries for the Mobile Aftermarket division.",
-      "Cut release risk by packaging Business Rule changes across staged DEV, TEST, and PROD environments with regression tests written before deployment, treating the released package, not only the code, as the unit under test.",
       "Improved reviewer control over product data by designing Business Rules and Business Actions for object lifecycle, reference management, and attribute-approval workflows, including partial-approval logic for references and values.",
-      "Reduced duplicated, fragile wizard behaviour by refactoring monolithic WebUI Business Rules into reusable library functions, giving multi-step product-creation screens one consistent, screen-specific validation source.",
-      "Removed repeated manual cleanup by building Excel and JavaScript tooling that automates list-of-values harmonisation, attribute-class assignment, and asset-reference migration across the product-data hierarchy."
+      "Reduced duplicated, fragile wizard behaviour by refactoring monolithic WebUI Business Rules into reusable library functions, giving multi-step product-creation screens one consistent, screen-specific validation source."
     ]
   },
   {
@@ -21,8 +19,8 @@ export const experience = [
     "role": "Software Engineer - ServiceNow ITSM",
     "period": "Jan 2022 to May 2024",
     "bullets": [
-      "Coordinated change management with stakeholders across Credit-Suisse, ICE, and Velux, keeping progress and feedback visible.",
-      "Implemented and documented software changes, modifications, and optimisations against the product life cycle in an Agile environment."
+      "Managed and optimised IT Service Management (ITSM) processes in ServiceNow, ensuring efficient incident, problem, and change management across the organisation.",
+      "Effectively implemented and documented software changes, modifications, and optimisations in alignment with the product life cycle analysis, supporting ongoing projects within an Agile-driven environment."
     ]
   },
   {

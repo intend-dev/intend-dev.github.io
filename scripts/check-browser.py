@@ -4,9 +4,9 @@
 # ///
 """Behavioural check for what the static checks cannot see.
 
-Drives the built dist/ in headless Chromium over CDP and asserts the no-JS fallback,
-print media, the real printed PDF, the theme toggle, icons, and the sticky case-study
-header.
+Drives the built dist/ in headless Chromium over CDP and asserts the no-JS fallback on
+both pages, print media, the real printed PDF, the theme toggle, icons, the sticky
+case-study and fact headers, and the header midline.
 
 The PDF assertion prints through Page.printToPDF and reads the text layer with pypdf;
 `websockets` is capped below 18 because the CDP session outlives a `with` block and uses
@@ -192,20 +192,22 @@ def wait_for(cdp: CDP, expression: str, timeout: float = 5.0) -> bool:
 
 
 def settle_ready(cdp: CDP, javascript: bool) -> bool:
-    """The case-study rows are static markup, so their count is the render signal."""
-    return wait_for(cdp, "document.querySelectorAll('.project-row').length === 6")
+    """The case-study rows are static markup, so their count is the render signal:
+    three on the profile page, six on the work page."""
+    expected = 6 if "/work" in cdp.evaluate("location.pathname") else 3
+    return wait_for(cdp, f"document.querySelectorAll('.project-row').length === {expected}")
 
 
 def goto(cdp: CDP, url: str, javascript: bool = True) -> None:
     cdp.call("Page.navigate", {"url": url})
     wait_for(cdp, "document.readyState === 'complete'")
-    expect(f"{url} finished loading and rendered the capstone track", settle_ready(cdp, javascript), counted=False)
+    expect(f"{url} finished loading and rendered the case-study rows", settle_ready(cdp, javascript), counted=False)
 
 
 def reload(cdp: CDP, javascript: bool = True) -> None:
     cdp.call("Page.reload", {"ignoreCache": True})
     wait_for(cdp, "document.readyState === 'complete'")
-    expect("reloaded page rendered the capstone track", settle_ready(cdp, javascript), counted=False)
+    expect("reloaded page rendered the case-study rows", settle_ready(cdp, javascript), counted=False)
 
 
 def viewport(cdp: CDP, width: int, height: int) -> None:
@@ -351,8 +353,8 @@ def main() -> int:
         scripts_enabled(cdp, False)
         reload(cdp, javascript=False)
         expect(
-            "No-JS: all six case studies are present",
-            cdp.evaluate("document.querySelectorAll('.case-disclosure').length") == 6,
+            "No-JS: the profile shows its three featured case studies",
+            cdp.evaluate("document.querySelectorAll('.case-disclosure').length") == 3,
         )
         expect(
             "No-JS: a case study opens natively",
@@ -369,8 +371,27 @@ def main() -> int:
             "No-JS: the theme toggle stays hidden",
             cdp.evaluate("document.querySelector('[data-theme-toggle]').hidden") is True,
         )
+        # All six studies live on the work page; they must stay present and openable
+        # there without JavaScript too.
+        cdp.call("Page.navigate", {"url": f"{origin}work/"})
+        wait_for(cdp, "document.readyState === 'complete'")
+        expect(
+            "No-JS: the work page shows all six case studies",
+            cdp.evaluate("document.querySelectorAll('.case-disclosure').length") == 6,
+        )
+        expect(
+            "No-JS: a work-page case study opens natively",
+            cdp.evaluate(
+                "(() => {"
+                " const d = document.querySelector('.case-disclosure');"
+                " d.querySelector('summary').click();"
+                " return d.open && d.querySelector('.row-body').getBoundingClientRect().height > 0;"
+                "})()"
+            )
+            is True,
+        )
         scripts_enabled(cdp, True)
-        reload(cdp)
+        goto(cdp, origin)
 
         # Theme toggle: an icon button that names its action, flips the root attribute,
         # and remembers the choice.
@@ -482,9 +503,21 @@ def main() -> int:
         media(cdp, "")
 
         # Switching rows: opening another case study closes the first, and the new row
-        # must start under the site header rather than mid-body.
-        cdp.call("Page.navigate", {"url": origin})
-        wait_for(cdp, "document.readyState === 'complete'")
+        # must start under the site header rather than mid-body. The six-study set
+        # lives on the work page.
+        goto(cdp, f"{origin}work/")
+        expect(
+            "Breadcrumb: hidden at rest on the work page (the nav Work link is highlighted)",
+            cdp.evaluate("document.querySelector('.nav-current').hidden") is True,
+        )
+        expect(
+            "Nav: work highlighted on the work page",
+            wait_for(
+                cdp,
+                "document.querySelector('.site-nav a[data-nav-key=\"work\"]')?.hasAttribute('aria-current')",
+                timeout=2,
+            ),
+        )
         cdp.evaluate("document.querySelectorAll('.case-disclosure')[0].open = true")
         time.sleep(0.15)
         cdp.evaluate(
@@ -513,6 +546,23 @@ def main() -> int:
         expect(
             f"Switching rows: the opened body starts below its summary (body {switched['bodyTop']}, summary {switched['summaryTop']})",
             switched["bodyTop"] > switched["summaryTop"],
+        )
+        crumb = cdp.evaluate(
+            """
+(() => {
+  const label = document.querySelector('.nav-current');
+  const ds = [...document.querySelectorAll('.case-disclosure')];
+  return { text: label.textContent, current: ds[2].dataset.navLabel, hidden: label.hidden, nav: [...document.querySelectorAll('.site-nav a[aria-current]')].map((a) => a.dataset.navKey) };
+})()
+"""
+        )
+        expect(
+            f"Breadcrumb: the sub-level only, without repeating Work ({crumb['text']!r})",
+            crumb["text"] == crumb["current"] and crumb["hidden"] is False,
+        )
+        expect(
+            f"Nav: work stays highlighted inside a work study ({crumb['nav']})",
+            crumb["nav"] == ["work"],
         )
 
         # Print: the case study flow and the row header keep their behaviour.
@@ -647,6 +697,133 @@ def main() -> int:
             after_close["marks"] == 0,
         )
 
+        # The header bar keeps one midline: the wordmark, the nav links, and the toggle
+        # all share a vertical center instead of hanging off the wordmark's baseline.
+        viewport(cdp, 1280, 900)
+        goto(cdp, origin)
+        nav_state = cdp.evaluate(
+            """
+(() => [...document.querySelectorAll('.site-nav a')].map((a) => ({ key: a.dataset.navKey, label: a.textContent.trim(), href: a.pathname + a.hash })))()
+"""
+        )
+        expect(
+            f"Nav: four links, examples first "
+            f"({json.dumps([item["label"] for item in nav_state])})",
+            [item["key"] for item in nav_state] == ["examples", "work", "about", "contact"],
+        )
+        expect(
+            "Nav: examples points at the home work section",
+            nav_state[0]["href"].endswith("#work") and nav_state[1]["href"].endswith("/work"),
+        )
+        cdp.evaluate("(() => { document.querySelector('#work').scrollIntoView({ block: 'start' }); return true; })()")
+        expect(
+            "Nav: examples highlights at the home work section",
+            wait_for(
+                cdp,
+                "document.querySelector('.site-nav a[data-nav-key=\"examples\"]')?.hasAttribute('aria-current')",
+                timeout=2,
+            ),
+        )
+        expect(
+            "Nav: work stays quiet on the home work section",
+            cdp.evaluate("document.querySelector('.site-nav a[data-nav-key=\"work\"]')?.hasAttribute('aria-current')") is False,
+        )
+        midline = cdp.evaluate(
+            """
+(async () => {
+  await document.fonts.ready;
+  const center = (el) => { const r = el.getBoundingClientRect(); return r.top + r.height / 2; };
+  return {
+    wordmark: center(document.querySelector('.wordmark')),
+    nav: center(document.querySelector('.site-nav a')),
+    toggle: center(document.querySelector('.theme-toggle')),
+  };
+})()
+"""
+        )
+        expect(
+            f"Header: one midline for wordmark, nav and toggle "
+            f"(nav {midline['nav'] - midline['wordmark']:+.1f}px, toggle {midline['toggle'] - midline['wordmark']:+.1f}px)",
+            abs(midline["nav"] - midline["wordmark"]) <= 1 and abs(midline["toggle"] - midline["wordmark"]) <= 1,
+        )
+
+        # The contact section ends the page: the space from its content to the footer
+        # rule must match the space from the rule above it, so the block does not hug
+        # its top border over a doubled void. (The last-section bottom spacing is the
+        # section's own padding; the footer carries no top margin.)
+        balance = cdp.evaluate(
+            """
+(() => {
+  const section = document.querySelector('#contact').getBoundingClientRect();
+  const head = document.querySelector('#contact .section-head').getBoundingClientRect();
+  const links = document.querySelector('#contact .contact-links').getBoundingClientRect();
+  const footer = document.querySelector('.site-footer').getBoundingClientRect();
+  return { above: Math.round(head.top - section.top), below: Math.round(footer.top - links.bottom) };
+})()
+"""
+        )
+        expect(
+            f"Contact: one separation, not two (above {balance['above']}px, below {balance['below']}px)",
+            balance["below"] <= balance["above"] + 8,
+        )
+
+        # Sticky fact header: an open About section keeps its title pinned under the site
+        # header while its body scrolls, and releases at the section's end.
+        cdp.evaluate("(() => { document.querySelector('#experience > .fact-summary').click(); return true; })()")
+        time.sleep(0.1)
+        fact_pinned = cdp.evaluate(
+            """
+(async () => {
+  const summary = document.querySelector('#experience > .fact-summary');
+  const header = document.querySelector('.site-header').getBoundingClientRect().height;
+  window.scrollTo({ top: summary.getBoundingClientRect().top + window.scrollY + 300, behavior: 'instant' });
+  await new Promise((done) => setTimeout(done, 150));
+  return {
+    open: document.querySelector('#experience').open,
+    stuck: summary.hasAttribute('data-stuck'),
+    shadow: getComputedStyle(summary).boxShadow,
+    top: Math.round(summary.getBoundingClientRect().top),
+    header: Math.round(header),
+  };
+})()
+"""
+        )
+        expect(
+            f"Sticky fact header: pinned under the site header (top {fact_pinned['top']}, header {fact_pinned['header']})",
+            fact_pinned["open"]
+            and fact_pinned["stuck"]
+            and fact_pinned["shadow"] != "none"
+            and abs(fact_pinned["top"] - fact_pinned["header"]) <= 1.5,
+        )
+        expect(
+            f"Sticky fact header: released again past the section",
+            cdp.evaluate(
+                """
+(async () => {
+  window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' });
+  await new Promise((done) => setTimeout(done, 150));
+  const summary = document.querySelector('#experience > .fact-summary');
+  return !summary.hasAttribute('data-stuck') && getComputedStyle(summary).boxShadow === 'none';
+})()
+"""
+            )
+            is True,
+        )
+        media(cdp, "print")
+        printed_fact = cdp.evaluate(
+            "(() => { const s = document.querySelector('#experience > .fact-summary'); "
+            "return { position: getComputedStyle(s).position, shadow: getComputedStyle(s).boxShadow }; })()"
+        )
+        expect(
+            f"Sticky fact header: static and unruled in print ({printed_fact['position']})",
+            printed_fact["position"] == "static" and printed_fact["shadow"] == "none",
+        )
+        expect(
+            "Portrait: kept off the printed page",
+            cdp.evaluate("getComputedStyle(document.querySelector('.story-portrait')).display") == "none",
+        )
+        media(cdp, "")
+
         # The committed CV PDF must still describe the page it claims to represent.
         # Text only: this catches a stale artifact, not a font difference. Page counts are
         # not compared across platforms because Linux falls back from Georgia and prints
@@ -699,8 +876,8 @@ def main() -> int:
         return 1
 
     print(
-        f"Browser check OK: {ASSERTIONS} assertions over the no-JS fallback, print layout "
-        "and PDF text, theme toggle, icons, and the sticky row header."
+        f"Browser check OK: {ASSERTIONS} assertions over the no-JS fallback on both pages, print layout "
+        "and PDF text, theme toggle, icons, the sticky row and fact headers, and the header midline."
     )
     return 0
 

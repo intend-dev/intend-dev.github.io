@@ -8,7 +8,7 @@ export async function getStaticPaths() {
 
   return projects.map((project) => ({
     params: { id: project.id },
-    props: { target: withBase(`/#case-${project.id}`) },
+    props: { target: withBase(`/work/#case-${project.id}`) },
   }));
 }
 

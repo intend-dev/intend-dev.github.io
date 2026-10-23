@@ -29,16 +29,16 @@ const index = requireFile('sitemap-index.xml', 'Sitemap index');
 const robots = requireFile('robots.txt', 'robots.txt');
 
 const locs = [...sitemap.matchAll(/<loc>([^<]*)<\/loc>/g)].map((match) => match[1].trim());
-const expected = [origin + '/'];
+const expected = [origin + '/', origin + '/work/'];
 const missing = expected.filter((url) => !locs.includes(url));
 const extra = locs.filter((url) => !expected.includes(url));
 if (locs.length !== expected.length) problems.push(`sitemap-0.xml has ${locs.length} URLs, expected ${expected.length}`);
 if (missing.length > 0) problems.push(`sitemap-0.xml is missing ${missing.join(', ')}`);
 if (extra.length > 0) problems.push(`sitemap-0.xml has unexpected URLs ${extra.join(', ')}`);
 
-const aliasUrls = locs.filter((url) => /\/work\/(?:[^/]+\/)?$/.test(url));
+const aliasUrls = locs.filter((url) => /\/work\/[^/]+\/$/.test(url));
 if (aliasUrls.length > 0) {
-  problems.push(`sitemap-0.xml lists a /work/ alias (${aliasUrls.join(', ')}); those routes are noindex redirects`);
+  problems.push(`sitemap-0.xml lists a /work/<slug>/ alias (${aliasUrls.join(', ')}); those routes are noindex redirects`);
 }
 
 const indexLocs = [...index.matchAll(/<loc>([^<]*)<\/loc>/g)].map((match) => match[1].trim());
@@ -62,7 +62,8 @@ const walk = (dir) => {
 walk(dist);
 
 const canonicalFor = (route) => {
-  if (/^(?:about|work)\/(?:[^/]+\/)?index\.html$/.test(route)) return `${origin}/`;
+  if (route === 'work/index.html') return `${origin}/work/`;
+  if (/^(?:about|work\/[^/]+)\/index\.html$/.test(route)) return `${origin}/`;
   if (route === 'index.html' || route === '404.html') return `${origin}/`;
   if (route === 'cv/index.html') return `${origin}/cv/`;
   return null;

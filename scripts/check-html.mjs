@@ -31,8 +31,15 @@ const EXPECTED = new Map([
     [
       copy.sections.caseStudies,
       copy.sections.capabilities,
+      copy.story.title,
       copy.about.focus,
       copy.sections.contact,
+    ],
+  ],
+  [
+    'work/index.html',
+    [
+      copy.work.heading,
     ],
   ],
   [
@@ -49,7 +56,7 @@ const EXPECTED = new Map([
 ]);
 
 
-const ALIASES = new Set(['about/index.html', 'work/index.html']);
+const ALIASES = new Set(['about/index.html']);
 const isAliasRoute = (route) => ALIASES.has(route) || /^work\/[^/]+\/index\.html$/.test(route);
 
 const ENTITIES = new Map([

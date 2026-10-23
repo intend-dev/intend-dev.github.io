@@ -130,7 +130,7 @@ for (const file of required) {
   if (!existsSync(join(dist, file))) errors.push(`missing required output dist/${file}`);
 }
 
-const stubRoutes = [...htmlByRoute.keys()].filter((route) => /^(?:about|work)\/(?:[^/]+\/)?index\.html$/.test(route));
+const stubRoutes = [...htmlByRoute.keys()].filter((route) => /^(?:about\/index\.html|work\/[^/]+\/index\.html)$/.test(route));
 for (const stub of stubRoutes) {
   const html = readFileSync(join(dist, stub), 'utf8');
   if (!/http-equiv="refresh"/i.test(html)) errors.push(`${stub}: missing meta refresh fallback`);
