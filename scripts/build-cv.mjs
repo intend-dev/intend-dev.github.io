@@ -11,9 +11,12 @@ const dist = join(root, 'dist');
 const pdf = join(root, 'public', 'Francisco_Mateus_CV.pdf');
 const base = (config.base ?? '').replace(/\/$/, '');
 const site = String(config.site ?? '').replace(/\/$/, '');
-// Chromium writes the document URL, so every internal hash link must be absolute
-// before printing or the PDF annotation points at the print server.
-const absolutizeInternalAnchors = (html) => html.replaceAll(`href="${base}/#`, `href="${site}${base}/#`);
+// Chromium writes the document URL, so every internal anchor must be absolute before
+// printing or the PDF annotation points at the print server. Only <a> hrefs: the
+// stylesheet and icon links must keep pointing at the print server itself.
+const internalAnchor = new RegExp(`(<a\\b[^>]*\\shref=")${base}/([^\"]*)"`, 'g');
+const absolutizeInternalLinks = (html) =>
+  html.replace(internalAnchor, (_, prefix, rest) => `${prefix}${site}${base}/${rest}"`);
 const pdfTemp = `${pdf}.tmp`;
 
 if (!existsSync(dist)) {
@@ -62,7 +65,7 @@ const server = createServer((request, response) => {
     }
 
     response.writeHead(200, { 'Content-Type': types[extname(file)] ?? 'application/octet-stream' });
-    if (extname(file) === '.html') response.end(absolutizeInternalAnchors(readFileSync(file, 'utf8')));
+    if (extname(file) === '.html') response.end(absolutizeInternalLinks(readFileSync(file, 'utf8')));
     else response.end(readFileSync(file));
   } catch (error) {
     response.writeHead(500).end('Server error');

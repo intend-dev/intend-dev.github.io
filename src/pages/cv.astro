@@ -8,7 +8,7 @@ import copy from '../data/copy.json';
 
 const linkedinLabel = profile.linkedin.replace(/^https?:\/\/(?:www\.)?/, '').replace(/\/$/, '');
 const githubLabel = profile.github.replace(/^https?:\/\/(?:www\.)?/, '').replace(/\/$/, '');
-const workUrl = new URL(withBase('/#work'), Astro.site).toString().replace(/^https?:\/\//, '');
+const workUrl = new URL(withBase('/work'), Astro.site).toString().replace(/^https?:\/\//, '');
 const siteUrl = new URL(withBase('/'), Astro.site).toString();
 const siteLabel = new URL(siteUrl).host;
 ---
@@ -58,7 +58,7 @@ const siteLabel = new URL(siteUrl).host;
     <section class="cv-section">
       <div class="section-head">
         <h2>{copy.cv.projects}</h2>
-        <span class="section-link">Additional Case Studies: <a href={withBase('/#work')}>{workUrl}</a></span>
+        <span class="section-link">Additional Case Studies: <a href={withBase('/work')}>{workUrl}</a></span>
       </div>
       {cvProjects.map((project) => (
         <div class="cv-project">

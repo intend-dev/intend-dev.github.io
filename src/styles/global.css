@@ -241,7 +241,9 @@ svg {
 .site-header .wrap {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  /* One midline: the serif wordmark shares no baseline with the small mono links, so
+     centering is what reads as aligned rather than a baseline pair. */
+  align-items: center;
   justify-content: space-between;
   gap: 0.75rem 1.5rem;
   /* The bottom padding holds the Work breadcrumb; the bar keeps one height. */
@@ -298,7 +300,7 @@ svg {
 .site-nav {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: 0.35rem 1.25rem;
 }
 
@@ -402,8 +404,9 @@ svg {
 
 .site-footer {
   border-top: var(--line);
+  /* No top margin: every page's last section carries its own symmetric bottom padding,
+     so a margin here doubled the void after Contact and the work page's disclosure. */
   padding-block: 2.5rem;
-  margin-top: var(--space-section);
 }
 
 .site-footer .wrap {
@@ -761,6 +764,37 @@ svg {
 
 /* Capabilities */
 
+/* The story fills the standard section width with the other sections: prose beside a
+   small portrait track, no air channel, the portrait flush with the right margin at
+   every width (track mirrors the image's own clamp). */
+
+.story {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(11rem, 14vw, 12rem);
+  gap: 1.5rem 3rem;
+  align-items: start;
+}
+
+.story-portrait {
+  width: 100%;
+  height: auto;
+  border: var(--line);
+  border-radius: 0.75rem;
+}
+
+@media (max-width: 899px) {
+  .story {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The intro reads face-first on a phone: portrait first, centered, then the text. */
+  .story-portrait {
+    order: -1;
+    place-self: center;
+    width: clamp(10rem, 40vw, 16rem);
+  }
+}
+
 .capabilities {
   display: grid;
   gap: 2rem;
@@ -841,6 +875,9 @@ svg {
   margin-top: 2rem;
 }
 
+/* The profile shows three of the six studies; the nav Work link is the bridge to
+   the work page, so the homepage carries no link into it. */
+
 /* Case study body */
 
 /* The timeline draws its own rule through the step markers (`.flow li` border-top on wide
@@ -904,7 +941,7 @@ svg {
 }
 
 /* Painted as a shadow, not a border: the bar keeps its height when the state flips, so
-   nothing below it moves. index.astro sets data-stuck from the scroll position. */
+   nothing below it moves. CaseList.astro sets data-stuck from the scroll position. */
 
 .case-disclosure[open] > summary[data-stuck] {
   box-shadow: 0 1px 0 var(--rule);
@@ -918,6 +955,27 @@ svg {
 
   .case-disclosure[open] > summary .row-inner {
     padding-block: 0.75rem;
+  }
+
+  /* Phone row header: the study title fills the row. The order number becomes a
+     kicker line above it; the number lane that squeezed the title into three
+     stacked lines is gone. */
+  .case-disclosure > summary .row-inner {
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 0.75rem;
+  }
+
+  .case-disclosure > summary .order {
+    grid-column: 1 / -1;
+    font-size: var(--step--2);
+  }
+
+  .case-disclosure > summary .project-title {
+    grid-column: 1;
+  }
+
+  .case-disclosure > summary .arrow {
+    grid-column: 2;
   }
 }
 
@@ -1115,6 +1173,23 @@ details[open] > .fact-summary .fact-marker {
 .fact-body {
   padding-block: 0.75rem 1.5rem;
   padding-inline-start: calc(0.85rem + 0.7rem);
+}
+
+/* An open fact pins its header under the site header, exactly like an open case-study
+   row, so a long section keeps its name in view while its body scrolls. */
+
+.fact[open] > .fact-summary {
+  position: sticky;
+  top: var(--header-h);
+  z-index: 40;
+  background: var(--bg);
+}
+
+/* Same pinned lower edge as the row header: painted as a shadow, not a border, so the
+   bar keeps its height when the state flips. CaseList.astro sets data-stuck. */
+
+.fact[open] > .fact-summary[data-stuck] {
+  box-shadow: 0 1px 0 var(--rule);
 }
 
 .fact + .fact {
@@ -1398,7 +1473,8 @@ details[open] > .fact-summary .fact-marker {
   .site-footer,
   .no-print,
   .theme-toggle,
-  .skip-link {
+  .skip-link,
+  .story-portrait {
     display: none !important;
   }
 
@@ -1524,12 +1600,14 @@ details[open] > .fact-summary .fact-marker {
 
   .case-disclosure > summary,
   .case-disclosure[open] > summary,
+  .fact[open] > .fact-summary,
   .sidebar {
     position: static;
   }
 
-  /* The stuck edge is a scroll affordance; a printed row header keeps no rule. */
-  .case-disclosure[open] > summary[data-stuck] {
+  /* The stuck edge is a scroll affordance; a printed header keeps no rule. */
+  .case-disclosure[open] > summary[data-stuck],
+  .fact[open] > .fact-summary[data-stuck] {
     box-shadow: none;
   }
 }

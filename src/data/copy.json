@@ -1,7 +1,13 @@
 {
   "nav": {
+    "examples": "Examples",
     "work": "Work",
     "caseStudies": "Case studies"
+  },
+  "work": {
+    "heading": "All case studies",
+    "note": "Architecture, evaluation evidence, what broke and how it was fixed",
+    "disclosure": "The AI projects are private coursework repositories. Each write-up documents the architecture, the evidence, and the failure that changed the build. I can walk through the implementation in an interview."
   },
   "sections": {
     "caseStudies": "Example case studies",
@@ -15,6 +21,15 @@
   },
   "about": {
     "focus": "My focus is clean data at the source, and AI output that can be checked"
+  },
+  "story": {
+    "eyebrow": "My story",
+    "title": "From industrial robots to AI systems",
+    "paragraphs": [
+      "I started programming in 2012, on microprocessors. Before that, and alongside it, there was art, photography, science, marketing, psychology, and robotics. I have studied a lot of things, and never to collect titles. I want to know how things work, and that curiosity does not always know where to stop. It is the reason I can walk into so many rooms and follow what is happening in them.",
+      "The robots nearly got me. I trained in automation because I wanted to build and fix actual robots, and what I found was maintenance, keeping machines that already existed alive, in a job that was less than advertised. I sat with that disappointment, and when the offers it promised never came, I jumped. I have been building software ever since, and the years in front of broken machines left me with the two habits I rely on most: patience with broken things, and looking at what nobody is looking at.",
+      "Today I balance Stibo STEP master data at Bosch with a master's in Artificial Intelligence, and I still chase the same understanding: psychology, philosophy, art, sci-fi, and the way machines see the world. It is not random interest. The method of one field keeps explaining the other. Observe the system first. Then act."
+    ]
   },
   "cv": {
     "summary": "Summary",
