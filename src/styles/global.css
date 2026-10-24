@@ -37,6 +37,9 @@
   --tracking-label: 0.08em; /* small mono uppercase labels: nav, field labels, table heads */
   --radius-pill: 999px;
   --transition: 120ms ease;
+
+  /* The hover-lift shadow colour; ink-tinted in light, plain black in dark. */
+  --lift: rgba(27, 27, 24, 0.35);
 }
 
 [data-theme="dark"] {
@@ -48,6 +51,7 @@
   --accent: #8be9a8;
   --accent-ink: #0c0e0d;
   --focus: #8be9a8;
+  --lift: rgba(0, 0, 0, 0.55);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -83,6 +87,7 @@ body {
   color: var(--ink);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+  transition: background-color var(--transition), color var(--transition);
 }
 
 h1,
@@ -477,6 +482,7 @@ svg {
   border: 1px solid var(--ink);
   color: var(--ink);
   background: transparent;
+  transition: background-color var(--transition), color var(--transition), border-color var(--transition);
 }
 
 .button:hover {
@@ -576,7 +582,6 @@ svg {
   color: var(--muted);
   font-size: var(--step-0);
   margin-top: 0.35rem;
-  overflow-wrap: anywhere;
 }
 
 .project-row .row-tags {
@@ -602,25 +607,49 @@ svg {
   transform: translateX(0.25rem);
 }
 
-/* Project cards (the profile's featured three) */
-
-/* One card is one link into the study's own page; the whole surface is the anchor. */
+/* The cards list: no bullets or default indent, one column - the card-link carries
+   the desktop art/text columns. The frame gives the artwork the same surface the
+   study page's exhibit uses, so the same diagram reads the same in both places. */
 
 .project-cards {
   display: grid;
   gap: 1.25rem;
-  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
 .project-card {
+  position: relative;
   border: var(--line);
   border-radius: 0.75rem;
   background: var(--surface);
-  overflow: hidden;
-  transition: border-color var(--transition);
+  transition:
+    border-color var(--transition),
+    transform var(--transition);
+}
+
+.project-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  /* The lifted shadow is a pre-painted layer whose opacity turns, so the hover lifts
+     on the compositor and never repaints a shadow per frame. */
+  box-shadow: 0 14px 32px -18px var(--lift);
+  opacity: 0;
+  transition: opacity var(--transition);
+  pointer-events: none;
+}
+
+.project-card:hover,
+.project-card:focus-within {
+  transform: translateY(-2px);
+}
+
+.project-card:hover::after,
+.project-card:focus-within::after {
+  opacity: 1;
 }
 
 .project-card:hover,
@@ -629,7 +658,8 @@ svg {
 }
 
 .card-link {
-  display: block;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   text-decoration: none;
   color: inherit;
 }
@@ -639,6 +669,32 @@ svg {
   width: 100%;
   height: auto;
   color: var(--muted);
+}
+
+.card-text {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1.25rem;
+}
+
+/* Wide rows on a desktop: the diagram beside the text keeps a study title on one
+   line and gives the summary its natural lane. The columns sit on the anchor, so the
+   frame stays plain. */
+
+@media (min-width: 900px) {
+  .card-link {
+    grid-template-columns: clamp(200px, 26%, 300px) minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .project-card .card-art {
+    padding: 1.5rem 0.5rem 1.5rem 1.5rem;
+    align-self: center;
+  }
+
+  .card-text {
+    padding: 1.75rem;
+  }
 }
 
 .card-art .thin {
@@ -664,12 +720,6 @@ svg {
   stroke-dasharray: 6 7;
 }
 
-.card-text {
-  display: grid;
-  gap: 0.5rem;
-  padding: 1.25rem;
-}
-
 .card-kicker {
   font-family: var(--mono);
   font-size: var(--step--1);
@@ -684,7 +734,6 @@ svg {
 .card-summary {
   color: var(--muted);
   font-size: var(--step--1);
-  overflow-wrap: anywhere;
 }
 
 .card-go {
@@ -1014,20 +1063,91 @@ svg {
   margin-block: clamp(2rem, 5vw, 3rem);
 }
 
-.case-layout {
-  display: grid;
-  gap: 2rem;
-  grid-template-columns: minmax(0, 1fr);
-}
-
-@media (min-width: 900px) {
-  .case-layout {
-    grid-template-columns: minmax(0, 2.1fr) minmax(220px, 0.9fr);
-    gap: 3.5rem;
-  }
-}
+/* The study body keeps the full section width: the text column is the page, so
+   sentences stop wrapping early. Flow, metrics and prose stack in one column. */
 
 /* Study page heading block */
+
+/* The study's opening diagram: the same element the profile card morphs into, presented
+   as a full-width exhibit in the card's frame language. The artwork keeps the diagram's
+   aspect until it reaches the height cap, so wide screens show it centered over air
+   instead of a billboard. */
+
+.study-art {
+  margin-top: 2rem;
+  padding: clamp(1rem, 3vw, 2rem);
+  border: var(--line);
+  border-radius: 0.75rem;
+  background: var(--surface);
+}
+
+.study-art .card-art {
+  display: block;
+  margin-inline: auto;
+  max-height: 360px;
+  max-width: 100%;
+  width: auto;
+  height: auto;
+}
+
+/* Ending navigation: previous on the left, next on the right; the two ends return to
+   the portfolio home, so no study dead-ends. Titles carry the links. */
+
+.study-nav {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: var(--line);
+}
+
+.study-nav-link {
+  display: grid;
+  gap: 0.25rem;
+  align-content: start;
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
+  overflow-wrap: anywhere;
+}
+
+.study-nav-next {
+  justify-self: end;
+  justify-items: end;
+  text-align: right;
+}
+
+.study-nav-kicker {
+  font-family: var(--mono);
+  font-size: var(--step--2);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.study-nav-title {
+  font-family: var(--serif);
+  font-size: var(--step-1);
+  line-height: 1.2;
+}
+
+.study-nav-link:hover .study-nav-title,
+.study-nav-link:focus-visible .study-nav-title {
+  color: var(--accent);
+}
+
+@media (max-width: 640px) {
+  .study-nav {
+    grid-template-columns: 1fr;
+  }
+
+  .study-nav-next {
+    justify-self: start;
+    justify-items: start;
+    text-align: left;
+  }
+}
 
 .study .back-link {
   margin: 0 0 2rem;
@@ -1044,12 +1164,12 @@ svg {
   color: var(--ink);
 }
 
-/* The study title is a full sentence written as a statement; it stays at the section
-   scale rather than the hero scale. */
+/* The study title and its lede run the full section width: they are a sentence and a
+   summary, not measured blocks, and the owner's rule is simple - the title fits the
+   line it was written for. */
 
 .study h1 {
   font-size: var(--step-3);
-  max-width: 30ch;
 }
 
 .study-lede {
@@ -1057,7 +1177,6 @@ svg {
   font-size: var(--step-1);
   line-height: 1.45;
   color: var(--muted);
-  max-width: 60ch;
 }
 
 .study .disclosure {
@@ -1125,36 +1244,30 @@ svg {
   overflow-wrap: anywhere;
 }
 
-.sidebar {
-  align-self: start;
+.study-meta {
+  margin-top: 1.75rem;
+  padding-block: 1rem;
   border-top: var(--line);
-  padding-top: 1rem;
   font-size: var(--step--1);
 }
 
-@media (min-width: 900px) {
-  .sidebar {
-    position: sticky;
-    top: calc(var(--header-h) + 1.5rem);
-  }
-}
-
-.sidebar .sidebar-heading {
-  font-family: var(--mono);
-  font-size: var(--step--1);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 1rem;
-}
-
-.sidebar dl {
+.study-meta dl {
   margin: 0;
-  display: grid;
-  gap: 0.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 2rem;
+  row-gap: 0.5rem;
+  align-items: baseline;
 }
 
-.sidebar dt {
+.study-meta dl > div {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 0.4rem;
+  align-items: baseline;
+}
+
+.study-meta dt {
   font-family: var(--mono);
   font-size: var(--step--2);
   letter-spacing: var(--tracking-label);
@@ -1162,16 +1275,17 @@ svg {
   color: var(--muted);
 }
 
-.sidebar dd {
-  margin: 0.15rem 0 0;
+.study-meta dd {
+  margin: 0;
 }
 
-.sidebar .tags {
-  margin-top: 0.25rem;
+.study-meta .tags {
+  margin: 0;
 }
 
-.sidebar .private-note {
-  margin-top: 1.25rem;
+.study-meta .private-note {
+  margin: 0;
+  font-size: var(--step--2);
   color: var(--muted);
 }
 
@@ -1486,6 +1600,40 @@ details[open] > .fact-summary .fact-marker {
   margin-top: 2rem;
 }
 
+/* Motion utilities: reveal and self-draw. The markup is always the finished state; the
+   pending hidden states exist only while a script-scheduled effect has not run yet, and
+   every rule sits inside the motion media query, so reduced-motion visitors, no-JS
+   visitors, and print never meet hidden content. */
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes draw {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  [data-reveal] {
+    transition: opacity 0.5s ease;
+  }
+
+  /* Opacity only: a transform here would make the wrap a containing block and break
+     the sticky fact headers inside it for the transition's duration. */
+  [data-reveal][data-pending] {
+    opacity: 0;
+  }
+
+  svg[data-draw][data-draw-pending] :is(path, rect, circle) {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+  }
+
+  svg[data-draw][data-drawing] :is(path, rect, circle) {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: draw 0.9s ease forwards;
+  }
+}
+
 /* Motion */
 
 @media (prefers-reduced-motion: reduce) {
@@ -1623,13 +1771,21 @@ details[open] > .fact-summary .fact-marker {
     color: #000000;
     text-decoration: none;
   }
+
+  /* Motion never hides content from the printer: revealed states resolve instantly and
+     self-drawing paths print finished. */
+  [data-reveal] {
+    opacity: 1 !important;
+  }
+
+  svg[data-draw] :is(path, rect, circle) {
+    animation: none !important;
+    stroke-dasharray: none !important;
+    stroke-dashoffset: 0 !important;
+  }
 }
 
 /* Page-level additions */
-
-.sidebar dd a {
-  display: block;
-}
 
 .cv-entry :is(h3, h4),
 .cv-project h3 {
@@ -1658,8 +1814,7 @@ details[open] > .fact-summary .fact-marker {
     content-visibility: visible;
   }
 
-  .fact[open] > .fact-summary,
-  .sidebar {
+  .fact[open] > .fact-summary {
     position: static;
   }
 

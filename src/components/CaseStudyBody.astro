@@ -7,11 +7,9 @@ import TagList from './TagList.astro';
 interface Props {
   project: CollectionEntry<'projects'>;
   html: string;
-  idPrefix?: string;
 }
 
-const { project, html, idPrefix = '' } = Astro.props;
-const glanceId = `${idPrefix}glance-heading`;
+const { project, html } = Astro.props;
 ---
 
 <div class="case-flow">
@@ -22,45 +20,4 @@ const glanceId = `${idPrefix}glance-heading`;
   <MetricGrid metrics={project.data.metrics} />
 </div>
 
-<div class="case-layout">
-  <div class="prose" set:html={html} />
-
-  <aside class="sidebar" aria-labelledby={`${idPrefix}glance-heading`}>
-    <h3 id={glanceId} class="sidebar-heading">At a glance</h3>
-    <dl>
-      <div>
-        <dt>Course project</dt>
-        <dd>{project.data.courseProject}</dd>
-      </div>
-      <div>
-        <dt>Course</dt>
-        <dd>{project.data.course}</dd>
-      </div>
-      <div>
-        <dt>Year</dt>
-        <dd>{project.data.year}</dd>
-      </div>
-      <div>
-        <dt>Role</dt>
-        <dd>{project.data.role}</dd>
-      </div>
-      <div>
-        <dt>Stack</dt>
-        <dd><TagList items={project.data.stack} /></dd>
-      </div>
-      {project.data.links.length > 0 && (
-        <div>
-          <dt>Links</dt>
-          <dd>
-            {project.data.links.map((link) => (
-              <a href={link.href} target="_blank" rel="noopener noreferrer">{link.label}<span class="sr-only new-tab-note"> (opens in a new tab)</span></a>
-            ))}
-          </dd>
-        </div>
-      )}
-    </dl>
-    {project.data.links.length === 0 && (
-      <p class="private-note">Code is private. Architecture and evidence are documented here.</p>
-    )}
-  </aside>
-</div>
+<div class="prose" set:html={html} />

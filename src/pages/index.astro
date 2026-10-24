@@ -99,7 +99,7 @@ const capabilities = [
        the disclosure's accessible name and is announced twice by some screen readers. The
        case-study rows are the exception: their title is the control's only visible label. -->
   <section class="section" id="capabilities">
-    <div class="wrap">
+    <div class="wrap" data-reveal>
       <SectionHeading title={copy.sections.capabilities} note="AI systems, evaluation and governance, and master data." />
       <div class="capabilities">
         {capabilities.map((capability) => (
@@ -113,7 +113,7 @@ const capabilities = [
   </section>
 
   <section class="section" id="story">
-    <div class="wrap">
+    <div class="wrap" data-reveal>
       <SectionHeading eyebrow={copy.story.eyebrow} title={copy.story.title} />
       <div class="story">
         <div class="story-text">
@@ -131,7 +131,7 @@ const capabilities = [
   </section>
 
   <section class="section" id="about">
-    <div class="wrap">
+    <div class="wrap" data-reveal>
       <SectionHeading eyebrow={copy.sections.about} title={copy.about.focus} />
       <div class="facts">
         <Fact id="experience" title={copy.sections.experience} note="Six roles across data, platforms, and support">
@@ -195,7 +195,7 @@ const capabilities = [
   </section>
 
   <section class="section" id="contact">
-    <div class="wrap">
+    <div class="wrap" data-reveal>
       <SectionHeading title={copy.sections.contact} note={profile.availability} />
       <ContactLinks />
     </div>
@@ -205,8 +205,10 @@ const capabilities = [
     (() => {
       // Sticky fact headers: an open summary pins under the site header and paints its
       // lower edge only while pinned (data-stuck), exactly at the header and never while
-      // clamped at the section's end, where it covers no moving text.
-      let stuckQueued = false;
+      // clamped at the section's end, where it covers no moving text. The window-level
+      // listeners bind once and query live DOM, so they survive View Transitions; the
+      // per-element toggle listeners rebind on every page load because the facts are
+      // the fresh page's own elements.
       const syncStuck = () => {
         stuckQueued = false;
         for (const summary of document.querySelectorAll('.fact > .fact-summary')) {
@@ -215,33 +217,45 @@ const capabilities = [
           summary.toggleAttribute('data-stuck', pinned);
         }
       };
+      let stuckQueued = false;
       const queueStuck = () => {
         if (stuckQueued) return;
         stuckQueued = true;
         requestAnimationFrame(syncStuck);
       };
-      window.addEventListener('scroll', queueStuck, { passive: true });
-      window.addEventListener('resize', queueStuck);
-      for (const details of document.querySelectorAll('.fact')) {
-        details.addEventListener('toggle', queueStuck);
-      }
-      syncStuck();
 
       // Printing opens the closed facts; only the blocks this run opened are closed
       // again, so a fact the visitor already had open stays open afterwards.
       const printOpened = [];
-      window.addEventListener('beforeprint', () => {
+      const openForPrint = () => {
         document.querySelectorAll('.fact:not([open])').forEach((details) => {
           details.open = true;
           printOpened.push(details);
         });
-      });
-      window.addEventListener('afterprint', () => {
+      };
+      const restoreAfterPrint = () => {
         printOpened.forEach((details) => {
           details.open = false;
         });
         printOpened.length = 0;
-      });
+      };
+
+      if (!window.__fmFacts) {
+        window.__fmFacts = true;
+        window.addEventListener('scroll', queueStuck, { passive: true });
+        window.addEventListener('resize', queueStuck);
+        window.addEventListener('beforeprint', openForPrint);
+        window.addEventListener('afterprint', restoreAfterPrint);
+      }
+
+      const bind = () => {
+        for (const details of document.querySelectorAll('.fact')) {
+          details.addEventListener('toggle', queueStuck);
+        }
+        syncStuck();
+      };
+      bind();
+      document.addEventListener('astro:page-load', bind);
     })();
   </script>
 </BaseLayout>
