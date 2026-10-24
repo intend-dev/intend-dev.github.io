@@ -435,8 +435,9 @@ def main() -> int:
             theme_initial["theme"] == "light" and theme_initial["moon"] != "none" and theme_initial["sun"] == "none",
         )
 
-        # The owner's default: light is what a visitor opens regardless of the OS colour
-        # scheme; only a stored choice (or a later press) lands on dark.
+        # Everyone lands light (owner decision, 2026-10-24): the OS scheme and storage
+        # are ignored on load; a press is a session choice that survives swaps but is
+        # never stored, so the next visit opens light again.
         cdp.evaluate("(() => { try { localStorage.removeItem('theme'); } catch (e) {} return true; })()")
         media(cdp, "", [{"name": "prefers-reduced-motion", "value": "no-preference"}, {"name": "prefers-color-scheme", "value": "dark"}])
         reload(cdp)
@@ -456,21 +457,41 @@ def main() -> int:
     label: button.getAttribute('aria-label'),
     sun: getComputedStyle(button.querySelector('.theme-icon-sun')).display,
     moon: getComputedStyle(button.querySelector('.theme-icon-moon')).display,
-    stored: localStorage.getItem('theme'),
+    session: window.__fmSessionTheme || null,
+    stored: (() => { try { return localStorage.getItem('theme'); } catch (e) { return null; } })(),
   };
 })()
 """
         )
         expect(
-            "Theme toggle: a press switches to dark and stores the choice",
-            flipped["theme"] == "dark" and flipped["stored"] == "dark",
+            "Theme toggle: a press switches to dark, sets the session choice, stores nothing",
+            flipped["theme"] == "dark" and flipped["session"] == "dark" and flipped["stored"] is None,
         )
         expect(
             "Theme toggle: the dark theme shows the sun and relabels",
             flipped["sun"] != "none" and flipped["moon"] == "none" and flipped["label"] == "Switch to light theme",
         )
+        # The session choice survives in-site swaps: the visitor's press stays theirs
+        # while they read the studies, and nothing lands in storage.
+        card = cdp.evaluate("document.querySelector('.project-card .card-link')?.getAttribute('href')")
+        cdp.evaluate("(() => { document.querySelector('.project-card .card-link').click(); return true; })()")
+        wait_for(cdp, f"location.pathname === '{card.rstrip('/')}/'")
+        session_swap = cdp.evaluate(
+            "document.documentElement.dataset.theme + '|' + (window.__fmSessionTheme || null)"
+        )
+        expect(
+            f"Theme: the session choice survives a swap into a study page ({session_swap})",
+            session_swap == "dark|dark",
+        )
+        cdp.evaluate("(() => { history.back(); return true; })()")
+        wait_for(cdp, "!!document.querySelector('[data-copy-email]')")
+        expect(
+            "Theme: the session choice survives the swap back",
+            cdp.evaluate("document.documentElement.dataset.theme") == "dark",
+        )
+        # A reload is a new visit: light wins again.
         reload(cdp)
-        persisted = cdp.evaluate(
+        fresh_again = cdp.evaluate(
             """
 ({
   theme: document.documentElement.dataset.theme,
@@ -479,22 +500,16 @@ def main() -> int:
 """
         )
         expect(
-            "Theme toggle: the choice survives a reload",
-            persisted["theme"] == "dark" and persisted["label"] == "Switch to light theme",
-        )
-        expect(
-            "Theme toggle: switching back returns the light theme",
-            cdp.evaluate(
-                "(() => { document.querySelector('[data-theme-toggle]').click(); "
-                "return document.documentElement.dataset.theme; })()"
-            )
-            == "light",
+            f"Theme: after a reload everyone lands light again (theme {fresh_again['theme']})",
+            fresh_again["theme"] == "light" and fresh_again["label"] == "Switch to dark theme",
         )
 
-        # The owner's bug, at its reproducible point: with the light choice stored, a
-        # click through the View Transition into a study page used to land on the css
-        # default theme with the toggle hidden (the swap replaces the html attributes
-        # and re-serves the header fresh). The re-apply hooks must keep both alive.
+        # The swap round trip, from a clean session: the light landing and the toggle
+        # survive into a study page (the swap replaces the html attributes and re-serves
+        # the header fresh). The re-apply hooks must keep both alive.
+        cdp.evaluate(
+            "(() => { window.__fmSessionTheme = null; try { localStorage.removeItem('theme'); } catch (e) {} return true; })()"
+        )
         card = cdp.evaluate("document.querySelector('.project-card .card-link')?.getAttribute('href')")
         cdp.evaluate("(() => { document.querySelector('.project-card .card-link').click(); return true; })()")
         wait_for(cdp, f"location.pathname === '{card.rstrip('/')}/'")
