@@ -15,10 +15,9 @@ import copy from '../data/copy.json';
           <!-- data-nav-key names the section each link tracks; the examples link opens
                the home sampler. -->
           <a data-nav-key="examples" href={withBase('/#work')}>{copy.nav.examples}</a>
-          <!-- Work: commented by the owner on `2026-10-23`: too much technical data in
-               the menu for now; the all-six page stays live on /work (the CV PDF links
-               it) and the restore is this comment mark. -->
-          <!-- <a data-nav-key="work" href={withBase('/work')}>{copy.nav.work}</a> -->
+          <!-- The Work menu item is commented by the owner on 2026-10-23: too much
+               technical data in the menu for now; the all-six page stays live on /work
+               (the CV PDF links it); restoring it means uncommenting this block here. -->
           <a data-nav-key="about" href={withBase('/#about')}>{copy.sections.about}</a>
           <a data-nav-key="contact" href={withBase('/#contact')}>{copy.sections.contact}</a>
         </nav>
