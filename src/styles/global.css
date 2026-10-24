@@ -18,7 +18,6 @@
   --measure-note: 42ch;
   --measure-display: 22ch;
   --header-h: 7rem; /* generous no-JS fallback; Header.astro replaces it with the measured height */
-  --row-head-h: 0px; /* measured height of an open case-study row header; set on the <details> */
 
   /* Type scale: fluid between a phone and a laptop; the max values are the old fixed
      sizes, so nothing changes at 1024px and up. */
@@ -534,7 +533,7 @@ svg {
   overflow-wrap: anywhere;
 }
 
-/* Project rows */
+/* Project rows (the work page's index) */
 
 .project-list {
   list-style: none;
@@ -545,6 +544,12 @@ svg {
 
 .project-row {
   border-bottom: var(--line);
+}
+
+.project-row .row-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
 }
 
 .project-row .row-inner {
@@ -595,6 +600,123 @@ svg {
 .project-row:focus-within .arrow {
   color: var(--accent);
   transform: translateX(0.25rem);
+}
+
+/* Project cards (the profile's featured three) */
+
+/* One card is one link into the study's own page; the whole surface is the anchor. */
+
+.project-cards {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.project-card {
+  border: var(--line);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  overflow: hidden;
+  transition: border-color var(--transition);
+}
+
+.project-card:hover,
+.project-card:focus-within {
+  border-color: var(--ink);
+}
+
+.card-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.card-art {
+  display: block;
+  width: 100%;
+  height: auto;
+  color: var(--muted);
+}
+
+.card-art .thin {
+  stroke-width: 1;
+  opacity: 0.75;
+}
+
+.card-art .accent {
+  stroke: var(--accent);
+}
+
+.card-art .dot {
+  fill: var(--accent);
+  stroke: none;
+}
+
+.card-art .hit {
+  fill: var(--accent);
+  fill-opacity: 0.16;
+}
+
+.card-art .dash {
+  stroke-dasharray: 6 7;
+}
+
+.card-text {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1.25rem;
+}
+
+.card-kicker {
+  font-family: var(--mono);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+.card-title {
+  font-size: var(--step-2);
+  margin: 0;
+}
+
+.card-summary {
+  color: var(--muted);
+  font-size: var(--step--1);
+  overflow-wrap: anywhere;
+}
+
+.card-go {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+  font-family: var(--mono);
+  font-size: var(--step--1);
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  transition: color var(--transition);
+}
+
+.project-card:hover .card-title,
+.project-card:focus-within .card-title,
+.project-card:hover .card-go,
+.project-card:focus-within .card-go {
+  color: var(--accent);
+}
+
+/* The quiet bridge from the featured three to the full index. */
+
+.case-more {
+  margin-top: 2rem;
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+.case-more a {
+  color: inherit;
+  text-decoration: underline;
 }
 
 /* Tags */
@@ -875,8 +997,8 @@ svg {
   margin-top: 2rem;
 }
 
-/* The profile shows three of the six studies; the nav Work link is the bridge to
-   the work page, so the homepage carries no link into it. */
+/* The study pages keep the disclosure note ("private coursework repositories")
+   directly under the case body. */
 
 /* Case study body */
 
@@ -905,99 +1027,41 @@ svg {
   }
 }
 
-/* Case studies open in place: each row is a disclosure whose body is the full study,
-   so the list, the scroll position, and the reading context never move. */
+/* Study page heading block */
 
-.case-disclosure > summary {
-  list-style: none;
-  cursor: pointer;
+.study .back-link {
+  margin: 0 0 2rem;
+  font-family: var(--mono);
+  font-size: var(--step--1);
 }
 
-.case-disclosure > summary::-webkit-details-marker {
-  display: none;
+.study .back-link a {
+  color: var(--muted);
+  text-decoration: none;
 }
 
-.case-disclosure:not([open]) > .row-body {
-  display: none;
+.study .back-link a:hover {
+  color: var(--ink);
 }
 
-.case-disclosure[open] > summary .arrow {
-  transform: rotate(90deg);
-  color: var(--accent);
+/* The study title is a full sentence written as a statement; it stays at the section
+   scale rather than the hero scale. */
+
+.study h1 {
+  font-size: var(--step-3);
+  max-width: 30ch;
 }
 
-/* Like the "At a glance" sidebar: while a case study is open, its row header stays
-   under the site header, so the reader always knows which study they are in and can
-   close it from anywhere in the text. At phone widths the header drops its summary
-   line and tags so it stays a compact bar instead of eating half the screen.
-   The header paints no rule of its own: the body's first separator (the case-flow
-   timeline on these studies) is the only line under it. */
-
-.case-disclosure[open] > summary {
-  position: sticky;
-  top: var(--header-h);
-  z-index: 40;
-  background: var(--bg);
+.study-lede {
+  margin-top: 1rem;
+  font-size: var(--step-1);
+  line-height: 1.45;
+  color: var(--muted);
+  max-width: 60ch;
 }
 
-/* Painted as a shadow, not a border: the bar keeps its height when the state flips, so
-   nothing below it moves. CaseList.astro sets data-stuck from the scroll position. */
-
-.case-disclosure[open] > summary[data-stuck] {
-  box-shadow: 0 1px 0 var(--rule);
-}
-
-@media screen and (max-width: 899px) {
-  .case-disclosure[open] > summary .summary,
-  .case-disclosure[open] > summary .row-tags {
-    display: none;
-  }
-
-  .case-disclosure[open] > summary .row-inner {
-    padding-block: 0.75rem;
-  }
-
-  /* Phone row header: the study title fills the row. The order number becomes a
-     kicker line above it; the number lane that squeezed the title into three
-     stacked lines is gone. */
-  .case-disclosure > summary .row-inner {
-    grid-template-columns: minmax(0, 1fr) auto;
-    column-gap: 0.75rem;
-  }
-
-  .case-disclosure > summary .order {
-    grid-column: 1 / -1;
-    font-size: var(--step--2);
-  }
-
-  .case-disclosure > summary .project-title {
-    grid-column: 1;
-  }
-
-  .case-disclosure > summary .arrow {
-    grid-column: 2;
-  }
-}
-
-@media (min-width: 900px) {
-  .case-disclosure[open] .sidebar {
-    top: calc(var(--header-h) + var(--row-head-h, 0px) + 1.5rem);
-  }
-}
-
-.row-body {
-  padding-bottom: clamp(1.5rem, 4vw, 2.5rem);
-}
-
-.row-body .prose h4 {
-  font-size: var(--step-2);
-  line-height: 1.15;
-  margin-top: 2.5rem;
-  margin-bottom: 0.75rem;
-}
-
-.row-body .prose h4:first-child {
-  margin-top: 0;
+.study .disclosure {
+  margin-top: 3rem;
 }
 
 .prose h2 {
@@ -1185,8 +1249,8 @@ details[open] > .fact-summary .fact-marker {
   background: var(--bg);
 }
 
-/* Same pinned lower edge as the row header: painted as a shadow, not a border, so the
-   bar keeps its height when the state flips. CaseList.astro sets data-stuck. */
+/* Same pinned lower edge: painted as a shadow, not a border, so the bar keeps its
+   height when the state flips. index.astro sets data-stuck from the scroll position. */
 
 .fact[open] > .fact-summary[data-stuck] {
   box-shadow: 0 1px 0 var(--rule);
@@ -1585,28 +1649,21 @@ details[open] > .fact-summary .fact-marker {
   }
 }
 
-/* A case study must print whether or not its row was opened. Chrome and Firefox expose
+/* The About facts must print whether or not they were opened. Chrome and Firefox expose
    the closed body through ::details-content; older engines rely on the beforeprint
-   handler, which opens every <details> first. */
+   handler, which opens every fact first. */
 
 @media print {
   details:not([open])::details-content {
     content-visibility: visible;
   }
 
-  .case-disclosure:not([open]) > .row-body {
-    display: block;
-  }
-
-  .case-disclosure > summary,
-  .case-disclosure[open] > summary,
   .fact[open] > .fact-summary,
   .sidebar {
     position: static;
   }
 
   /* The stuck edge is a scroll affordance; a printed header keeps no rule. */
-  .case-disclosure[open] > summary[data-stuck],
   .fact[open] > .fact-summary[data-stuck] {
     box-shadow: none;
   }

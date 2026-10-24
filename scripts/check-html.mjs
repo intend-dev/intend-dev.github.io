@@ -29,7 +29,7 @@ const EXPECTED = new Map([
   [
     'index.html',
     [
-      copy.sections.caseStudies,
+      copy.sections.projects,
       copy.sections.capabilities,
       copy.story.title,
       copy.about.focus,
@@ -57,7 +57,11 @@ const EXPECTED = new Map([
 
 
 const ALIASES = new Set(['about/index.html']);
-const isAliasRoute = (route) => ALIASES.has(route) || /^work\/[^/]+\/index\.html$/.test(route);
+const isAliasRoute = (route) => ALIASES.has(route);
+// The study pages are real pages with content-driven headings; they take the generic
+// rules (one h1, ordered levels, unique ids) without a pinned outline, which would
+// otherwise duplicate check-facts' section assertions against source text.
+const isStudyRoute = (route) => /^work\/[^/]+\/index\.html$/.test(route);
 
 const ENTITIES = new Map([
   ['&amp;', '&'],
@@ -111,7 +115,7 @@ for (const file of files) {
     seen.add(id);
   }
 
-  if (!EXPECTED.has(route) && !isAliasRoute(route)) {
+  if (!EXPECTED.has(route) && !isAliasRoute(route) && !isStudyRoute(route)) {
     problems.push(`${route}: unexpected page in dist/`);
     continue;
   }

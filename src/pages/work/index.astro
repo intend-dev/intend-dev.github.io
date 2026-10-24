@@ -2,7 +2,7 @@
 import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import SectionHeading from '../../components/SectionHeading.astro';
-import CaseList from '../../components/CaseList.astro';
+import ProjectRow from '../../components/ProjectRow.astro';
 import copy from '../../data/copy.json';
 
 const projects = (await getCollection('projects', ({ data }) => data.status === 'completed' && !data.draft)).sort(
@@ -14,13 +14,15 @@ const projects = (await getCollection('projects', ({ data }) => data.status === 
   title="Case studies · Francisco Mateus"
   description="The six AI case studies of Francisco Mateus: RAG with enforced citations, agent orchestration, moderation, evaluation, fairness, retrieval benchmarks."
 >
-  <!-- The visible heading is the same section heading as on the profile, so the h1 names the
-       page for the outline and assistive tech without repeating itself on screen. -->
+  <!-- The visible heading is the page's real heading, so the h1 names the page for the
+       outline and assistive tech without repeating itself on screen. -->
   <h1 class="sr-only">{copy.nav.caseStudies}</h1>
   <section class="section" id="all-work">
     <div class="wrap">
       <SectionHeading title={copy.work.heading} note={copy.work.note} />
-      <CaseList projects={projects} navArea="work" />
+      <ul class="project-list">
+        {projects.map((project) => <ProjectRow project={project} />)}
+      </ul>
       <p class="disclosure">{copy.work.disclosure}</p>
     </div>
   </section>

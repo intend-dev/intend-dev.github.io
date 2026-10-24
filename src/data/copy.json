@@ -1,6 +1,6 @@
 {
   "nav": {
-    "examples": "Examples",
+    "projects": "Selected projects",
     "work": "Work",
     "caseStudies": "Case studies"
   },
@@ -10,7 +10,7 @@
     "disclosure": "The AI projects are private coursework repositories. Each write-up documents the architecture, the evidence, and the failure that changed the build. I can walk through the implementation in an interview."
   },
   "sections": {
-    "caseStudies": "Example case studies",
+    "projects": "Selected projects",
     "capabilities": "What I work on",
     "about": "About me",
     "contact": "Contact",
@@ -18,6 +18,9 @@
     "skills": "Skills",
     "certifications": "Main Certifications",
     "education": "Education"
+  },
+  "projects": {
+    "more": "Six studies in total."
   },
   "about": {
     "focus": "My focus is clean data at the source, and AI output that can be checked"

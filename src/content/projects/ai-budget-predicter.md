@@ -3,6 +3,7 @@ title: "Discrimination analysis and fairness audit of a high-accuracy model"
 courseProject: "AI Budget Predicter (Ethics)"
 summary: "A budget-prediction model with 0.9885 balanced accuracy at the threshold that maximises it, a dataset-level Disparate Impact of 0.0149, and a reweighing pass that restored equal opportunity on the same test split."
 order: 6
+featured: true
 status: completed
 course: "Ethics in AI"
 year: "2026"

@@ -118,10 +118,15 @@ if (!headerHidden) {
 const PRINT_CONTENT = new Set([
   '.project-list',
   '.project-row',
-  '.row-body',
-  '.chips',
-  '.case-disclosure',
+  '.project-cards',
+  '.project-card',
+  '.card-link',
+  '.card-art',
+  '.study',
+  '.prose',
+  '.case-layout',
   '.case-flow',
+  '.chips',
 ]);
 for (const rule of printRules) {
   const hides = declarationsOf(rule).some((entry) => entry.property === 'display' && entry.value === 'none');

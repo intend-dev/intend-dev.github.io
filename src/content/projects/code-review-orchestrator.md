@@ -3,6 +3,7 @@ title: "A code review orchestrator for live pull requests"
 courseProject: "Enterprise Multi-Agent Code Review Orchestrator"
 summary: "Two MCP servers, three specialist reviewers per changed file, and a Zod-validated report built from live GitHub pull requests against a reconstructed repository fixture."
 order: 1
+featured: true
 status: completed
 course: "AI Engineering with Claude"
 year: "2026"

@@ -29,16 +29,25 @@ const index = requireFile('sitemap-index.xml', 'Sitemap index');
 const robots = requireFile('robots.txt', 'robots.txt');
 
 const locs = [...sitemap.matchAll(/<loc>([^<]*)<\/loc>/g)].map((match) => match[1].trim());
-const expected = [origin + '/', origin + '/work/'];
+// The six published slugs are the same deliberate list as in check-links.mjs.
+const studySlugs = [
+  'ai-budget-predicter',
+  'ai-development-harness',
+  'code-review-orchestrator',
+  'multimodal-moderation',
+  'nasa-mission-rag',
+  'semantic-retrieval-benchmark',
+];
+const expected = [origin + '/', origin + '/work/', ...studySlugs.map((slug) => `${origin}/work/${slug}/`)];
 const missing = expected.filter((url) => !locs.includes(url));
 const extra = locs.filter((url) => !expected.includes(url));
 if (locs.length !== expected.length) problems.push(`sitemap-0.xml has ${locs.length} URLs, expected ${expected.length}`);
 if (missing.length > 0) problems.push(`sitemap-0.xml is missing ${missing.join(', ')}`);
 if (extra.length > 0) problems.push(`sitemap-0.xml has unexpected URLs ${extra.join(', ')}`);
 
-const aliasUrls = locs.filter((url) => /\/work\/[^/]+\/$/.test(url));
-if (aliasUrls.length > 0) {
-  problems.push(`sitemap-0.xml lists a /work/<slug>/ alias (${aliasUrls.join(', ')}); those routes are noindex redirects`);
+const unslashed = locs.filter((url) => !url.endsWith('/'));
+if (unslashed.length > 0) {
+  problems.push(`sitemap-0.xml lists URLs without a trailing slash (${unslashed.join(', ')})`);
 }
 
 const indexLocs = [...index.matchAll(/<loc>([^<]*)<\/loc>/g)].map((match) => match[1].trim());
@@ -63,7 +72,8 @@ walk(dist);
 
 const canonicalFor = (route) => {
   if (route === 'work/index.html') return `${origin}/work/`;
-  if (/^(?:about|work\/[^/]+)\/index\.html$/.test(route)) return `${origin}/`;
+  if (/^work\/[^/]+\/index\.html$/.test(route)) return `${origin}/${route.replace(/index\.html$/, '')}`;
+  if (route === 'about/index.html') return `${origin}/`;
   if (route === 'index.html' || route === '404.html') return `${origin}/`;
   if (route === 'cv/index.html') return `${origin}/cv/`;
   return null;

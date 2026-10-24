@@ -12,9 +12,9 @@ import copy from '../data/copy.json';
     <div class="header-actions">
       <div class="header-work">
         <nav class="site-nav" aria-label="Primary">
-          <!-- data-nav-key names the section each link tracks; the examples link opens
-               the home sampler. -->
-          <a data-nav-key="examples" href={withBase('/#work')}>{copy.nav.examples}</a>
+          <!-- data-nav-key names the section each link tracks; the projects link opens
+               the home featured cards. -->
+          <a data-nav-key="projects" href={withBase('/#work')}>{copy.nav.projects}</a>
           <!-- The Work menu item is commented by the owner on 2026-10-23: too much
                technical data in the menu for now; the all-six page stays live on /work
                (the CV PDF links it); restoring it means uncommenting this block here. -->
@@ -52,27 +52,20 @@ import copy from '../data/copy.json';
     }
 
     // Section tracking: name the last section whose top passed the reading horizon.
-    // The label names the section in the header; the work subcategories hang under
-    // the Work link. About and Contact have their own underlined link, so they stay
-    // unnamed here instead of saying the same word twice.
+    // The label names the section in the header. About and Contact have their own
+    // underlined link, so they stay unnamed here instead of saying the same word twice.
     // This script runs before <main>, so the sections are resolved after parsing.
     const trackSections = () => {
       const label = document.querySelector('.nav-current');
       if (!label) return;
 
-      const inlineCases = [...document.querySelectorAll('[data-nav-label]')]
-        .sort((a, b) => Number(a.dataset.navOrder) - Number(b.dataset.navOrder))
-        .map((element) => ({ id: element.id, crumb: element.dataset.navLabel, nav: element.dataset.navArea || 'work' }));
-
-      // The nav link carries the section word (aria-current highlights it), so the
-      // breadcrumb names only the sub-level: at rest it shows nothing, and inside an
-      // open study it reads "Case study 03" without repeating "Work". Each page
-      // contributes the sections it renders; entries that do not exist are filtered out.
+      // Each page contributes the sections it renders; entries that do not exist are
+      // filtered out, so a study page, which tracks none of them, keeps the breadcrumb
+      // hidden and no link highlighted.
       const sections = [
         { id: 'overview', crumb: null },
-        { id: 'all-work', crumb: null, nav: 'work' },
-        { id: 'work', crumb: null, nav: 'examples' },
-        ...inlineCases,
+        { id: 'work', crumb: null, nav: 'projects' },
+        { id: 'all-work', crumb: null },
         { id: 'capabilities', crumb: null },
         { id: 'story', crumb: null, nav: 'about' },
         { id: 'about', crumb: null, nav: 'about' },
@@ -93,17 +86,12 @@ import copy from '../data/copy.json';
       const update = () => {
         const height = header.getBoundingClientRect().height;
         const horizon = window.scrollY + height + 24;
-        // A closed case-study disclosure has no body in flow, so it cannot name the
-        // current section; only an opened one counts.
-        const active = sections.filter(
-          (section) => section.element.tagName !== 'DETAILS' || section.element.open,
-        );
-        let current = active[0];
-        for (const section of active) {
+        let current = sections[0];
+        for (const section of sections) {
           if (section.element.getBoundingClientRect().top + window.scrollY <= horizon) current = section;
         }
         // A short final section can sit below the horizon on a tall viewport.
-        if (atEnd) current = active[active.length - 1];
+        if (atEnd) current = sections[sections.length - 1];
         label.textContent = current.crumb ?? '';
         label.hidden = !current.crumb;
         for (const [target, link] of links) {

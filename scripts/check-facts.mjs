@@ -28,15 +28,16 @@ const home = stripHtml(homeHtml);
 const work = stripHtml(workHtml);
 const cv = readPage('cv/index.html');
 
-// The profile shows the first three studies; the work page shows all six. Counting the
-// rows is the outcome: a fourth study on the profile, or a missing one on the work
-// page, is a defect a visitor sees.
-const caseCount = (html) => (html.match(/class="case-disclosure"/g) ?? []).length;
-if (caseCount(homeHtml) !== 3) {
-  problems.push(`the profile shows ${caseCount(homeHtml)} case studies, expected the first 3`);
+// The profile shows its featured studies as cards; the work page is the index of six.
+// Counting them is the outcome: a fourth card on the profile, or a missing row on the
+// index, is a defect a visitor sees.
+const cardCount = (html) => (html.match(/class="project-card"/g) ?? []).length;
+const rowCount = (html) => (html.match(/class="project-row"/g) ?? []).length;
+if (cardCount(homeHtml) !== 3) {
+  problems.push(`the profile shows ${cardCount(homeHtml)} study cards, expected 3`);
 }
-if (caseCount(workHtml) !== 6) {
-  problems.push(`the work page shows ${caseCount(workHtml)} case studies, expected all 6`);
+if (rowCount(workHtml) !== 6) {
+  problems.push(`the work page shows ${rowCount(workHtml)} study rows, expected all 6`);
 }
 
 // ---------------------------------------------------------------------------
@@ -67,12 +68,17 @@ const projectFiles = existsSync(projectDir)
 if (projectFiles.length !== 6) problems.push(`Expected 6 case studies, found ${projectFiles.length}.`);
 
 const orders = new Set();
+let featuredCount = 0;
 for (const file of projectFiles) {
   const source = readFileSync(join(projectDir, file), 'utf8');
   const frontmatter = source.slice(0, source.indexOf('---', 3));
   const title = frontmatter.match(/^title:\s*"(.+)"$/m)?.[1];
   const courseProject = frontmatter.match(/^courseProject:\s*"(.+)"$/m)?.[1];
   const order = Number(frontmatter.match(/^order:\s*(\d+)$/m)?.[1]);
+  const featured = /^featured:\s*true$/m.test(frontmatter);
+  const slug = file.replace(/\.md$/, '');
+  const studyPage = join(dist, 'work', slug, 'index.html');
+  if (featured) featuredCount += 1;
 
   if (!title) problems.push(`${file}: missing title`);
   if (!courseProject) problems.push(`${file}: missing courseProject`);
@@ -89,8 +95,18 @@ for (const file of projectFiles) {
   }
 
   if (title && !work.includes(title)) problems.push(`${file}: title missing from the work page`);
-  if (title && order <= 3 && !home.includes(title)) problems.push(`${file}: featured title missing from the profile`);
+  if (!existsSync(studyPage)) {
+    problems.push(`${file}: missing study page dist/work/${slug}/index.html`);
+  } else {
+    const studyText = stripHtml(readFileSync(studyPage, 'utf8'));
+    if (title && !studyText.includes(title)) problems.push(`${file}: title missing from its study page`);
+  }
+  if (title && featured && !home.includes(title)) problems.push(`${file}: featured title missing from the profile`);
 }
+
+// Three featured studies is a content decision, like the six; a fourth card needs this
+// number and the profile layout revisited.
+if (featuredCount !== 3) problems.push(`Expected 3 featured studies, found ${featuredCount}.`);
 
 if (problems.length > 0) {
   console.error(`Facts check failed with ${problems.length} problem(s):`);
@@ -170,11 +186,12 @@ for (const file of projectFiles) {
   const frontmatter = source.slice(0, source.indexOf('---', 3));
   const courseProject = frontmatter.match(/^courseProject:\s*"(.+)"$/m)?.[1];
   const order = Number(frontmatter.match(/^order:\s*(\d+)$/m)?.[1]);
+  const studyText = readPage(`work/${file.replace(/\.md$/, '')}/index.html`);
   if (courseProject && !record.includes(courseProject)) {
     problems.push(`${file}: courseProject not found in the career record`);
   }
   for (const token of projectTokens.get(order) ?? []) {
-    if (!work.includes(token)) problems.push(`${file}: record value ${token} missing from the work page`);
+    if (!studyText.includes(token)) problems.push(`${file}: record value ${token} missing from its study page`);
   }
 }
 

@@ -1,22 +1,33 @@
 ---
 import { getCollection } from 'astro:content';
-import RedirectPage from '../../components/RedirectPage.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import CaseStudyBody from '../../components/CaseStudyBody.astro';
 import { withBase } from '../../lib/url';
+import copy from '../../data/copy.json';
 
 export async function getStaticPaths() {
   const projects = await getCollection('projects', ({ data }) => data.status === 'completed' && !data.draft);
-
-  return projects.map((project) => ({
-    params: { id: project.id },
-    props: { target: withBase(`/work/#case-${project.id}`) },
-  }));
+  return projects.map((project) => ({ params: { id: project.id }, props: { project } }));
 }
 
-const { target } = Astro.props;
+const { project } = Astro.props;
+// The study's Markdown headings are h2 in the source and keep that level here: the page
+// has no other content level between them and the h1.
+const html = project.rendered?.html ?? '';
 ---
 
-<RedirectPage
-  title="Case study moved · Francisco Mateus"
-  target={target}
-  message="This case study is on the overview page."
-/>
+<BaseLayout
+  title={`${project.data.title} · Francisco Mateus`}
+  description={project.data.summary}
+  type="article"
+>
+  <article class="section study">
+    <div class="wrap">
+      <p class="back-link"><a href={withBase('/work')}>&larr; {copy.work.heading}</a></p>
+      <h1>{project.data.title}</h1>
+      <p class="study-lede">{project.data.summary}</p>
+      <CaseStudyBody project={project} html={html} />
+      <p class="disclosure">{copy.work.disclosure}</p>
+    </div>
+  </article>
+</BaseLayout>
