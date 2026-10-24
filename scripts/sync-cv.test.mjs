@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { CvSourceError, buildCareerData, parseCv, parseRecord, serializeCareer } from './lib/cv-source.mjs';
+import { CvSourceError, buildCareerData, parseCv, parseRecord, projectTokensOf, serializeCareer } from './lib/cv-source.mjs';
 
 const CV = `# CV
 
@@ -76,6 +76,8 @@ Bosch (Bosch Digital), Sii Poland, Woolf, AI, Data.
 
 ### MSc capstone track
 
+### Testing
+
 ## Certifications (full set, from SRC2)
 
 Udacity Institute of AI & Technology:
@@ -135,6 +137,24 @@ test('reads locations and the current certification selection from the record', 
     { name: 'Cert C', issuer: 'ServiceNow', date: 'Jan 2023', status: 'expired' },
     { name: 'ITIL v4', issuer: 'PeopleCert', date: 'Oct 2021' },
   ]);
+});
+
+const RECORD_TOKENS = `
+## Project inventory
+
+| # | Project | Source | Verified numbers |
+| --- | --- | --- | --- |
+| P1 | Project One | Course | \`93%\` \`1.7 seconds\` \`a_b\` \`and/or\` \`7\` |
+| P2 | Project Two | Course | \`EUR 240\` \`nasa_mission\` |
+
+### Testing
+`;
+
+test('extracts the project tokens, keeping prose numbers and dropping internal codes', () => {
+  const tokens = projectTokensOf(RECORD_TOKENS);
+  assert.deepEqual(tokens.get(1), ['93%', '1.7 seconds']);
+  assert.deepEqual(tokens.get(2), ['EUR 240']);
+  assert.equal(tokens.has(3), false);
 });
 
 test('splits the location from the company and omits it when absent', () => {

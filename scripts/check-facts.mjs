@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { certGroupsOf, projectTokensOf } from './lib/cv-source.mjs';
 import { stripHtml } from './lib/facts.mjs';
 
 const root = resolve(process.cwd());
@@ -74,7 +75,6 @@ for (const file of projectFiles) {
   const frontmatter = source.slice(0, source.indexOf('---', 3));
   const title = frontmatter.match(/^title:\s*"(.+)"$/m)?.[1];
   const courseProject = frontmatter.match(/^courseProject:\s*"(.+)"$/m)?.[1];
-  const course = frontmatter.match(/^course:\s*"(.+)"$/m)?.[1];
   const order = Number(frontmatter.match(/^order:\s*(\d+)$/m)?.[1]);
   const featured = /^featured:\s*true$/m.test(frontmatter);
   const slug = file.replace(/\.md$/, '');
@@ -129,52 +129,13 @@ if (!existsSync(recordPath)) {
 
 // ---------------------------------------------------------------------------
 // Record: needs the private career record. CI has no such checkout.
+// The section parsing (certification groups, project inventory tokens) lives in
+// scripts/lib/cv-source.mjs, shared with the generator, so the record gets one parser.
 // ---------------------------------------------------------------------------
 
 const record = requireText(recordPath, 'Career record');
-const certSection = record.slice(
-  record.indexOf('## Certifications (full set'),
-  record.indexOf('## Skills ledger'),
-);
-
-const tableRows = (text) =>
-  text
-    .split('\n')
-    .filter((line) => line.trim().startsWith('|'))
-    .map((line) =>
-      line
-        .trim()
-        .replace(/^\|/, '')
-        .replace(/\|$/, '')
-        .split('|')
-        .map((cell) => cell.trim()),
-    )
-    .filter((row) => row.length > 1 && row[0] !== 'Certificate' && !row[0].startsWith('---'));
-
-const certGroup = (start, end) => {
-  const from = certSection.indexOf(start);
-  const to = end ? certSection.indexOf(end, from + start.length) : certSection.length;
-  return from === -1 ? [] : tableRows(certSection.slice(from, to));
-};
-
-const udacity = certGroup('Udacity Institute of AI & Technology:', 'Stibo Systems:');
-const stibo = certGroup('Stibo Systems:', 'ServiceNow (');
-const serviceNow = certGroup('ServiceNow (', 'Other:');
-const other = certGroup('Other:', null);
-
-const projectSection = record.slice(
-  record.indexOf('## Project inventory'),
-  record.indexOf('### Testing'),
-);
-const projectTokens = new Map();
-for (const row of tableRows(projectSection)) {
-  if (!/^P[1-6]$/.test(row[0]) || row.length < 4) continue;
-  const order = Number(row[0].slice(1));
-  const tokens = [...row[3].matchAll(/`([^`]+)`/g)]
-    .map((match) => match[1])
-    .filter((token) => !token.includes('_') && !token.includes('/') && !/^\d$/.test(token));
-  projectTokens.set(order, tokens);
-}
+const { udacity, stibo, serviceNow, other } = certGroupsOf(record);
+const projectTokens = projectTokensOf(record);
 
 // The page must publish what the record says. The checks below derive the expected text
 // from the record itself, so a record change surfaces here and not in a duplicated literal.

@@ -127,12 +127,10 @@ const capabilities = [
           class="story-portrait"
         />
       </div>
-    </div>
-  </section>
 
-  <section class="section" id="about">
-    <div class="wrap" data-reveal>
-      <SectionHeading eyebrow={copy.sections.about} title={copy.about.focus} />
+      <!-- The About cluster: the story, then its receipts. The menu's About me opens
+           this section at the story; the facts follow the narrative. The old About
+           heading was dropped by the owner: it restated the hero and the contact note. -->
       <div class="facts">
         <Fact id="experience" title={copy.sections.experience} note="Six roles across data, platforms, and support">
           {experience.map((role) => (

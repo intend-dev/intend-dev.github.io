@@ -146,35 +146,65 @@ const groupBetween = (text, start, end) => {
   return text.slice(from, to);
 };
 
+// The four certification groups of the record's Certifications section, as raw table
+// rows. Shared by the generator (it names issuers and dates) and the facts check (it
+// counts the groups), so one copy parses and the section headers live in one place.
+export const certGroupsOf = (markdown) => {
+  const section = groupBetween(markdown, '## Certifications', '## Skills ledger');
+  const group = (start, end) => tableRows(groupBetween(section, start, end));
+  return {
+    udacity: group('Udacity Institute of AI & Technology:', 'Stibo Systems:'),
+    stibo: group('Stibo Systems:', 'ServiceNow ('),
+    serviceNow: group('ServiceNow (', 'Other:'),
+    other: group('Other:', null),
+  };
+};
+
+// One walk of the project inventory table, shared by both consumers: the generator
+// projects the verified-number columns from it, the facts check the backticked tokens.
+// The capstone subsection rows carry codes the P[1-6] filters drop in both consumers.
+export const inventoryRowsOf = (markdown) =>
+  tableRows(groupBetween(markdown, '## Project inventory', '### Testing'));
+
+// The per-project verified numbers the record backticks in its inventory. Consumed by
+// the facts check, which requires each published study page to carry every token.
+export const projectTokensOf = (markdown) => {
+  const tokens = new Map();
+  for (const row of inventoryRowsOf(markdown)) {
+    if (!/^P[1-6]$/.test(row[0]) || row.length < 4) continue;
+    const order = Number(row[0].slice(1));
+    const found = [...row[3].matchAll(/`([^`]+)`/g)]
+      .map((match) => match[1])
+      .filter((token) => !token.includes('_') && !token.includes('/') && !/^\d$/.test(token));
+    tokens.set(order, found);
+  }
+  return tokens;
+};
+
 export const parseRecord = (markdown) => {
   const locations = [...markdown.matchAll(/^\| (?:Work|Home) location \| ([^|]+) \|/gm)].map((match) =>
     match[1].trim(),
   );
 
-  const certSection = groupBetween(markdown, '## Certifications', '## Skills ledger');
-  const udacity = groupBetween(certSection, 'Udacity Institute of AI & Technology:', 'Stibo Systems:');
-  const stibo = groupBetween(certSection, 'Stibo Systems:', 'ServiceNow (');
-  const serviceNow = groupBetween(certSection, 'ServiceNow (', 'Other:');
-  const other = groupBetween(certSection, 'Other:', null);
-
+  const groups = certGroupsOf(markdown);
   const certifications = [
-    ...tableRows(udacity).map((row) => ({
+    ...groups.udacity.map((row) => ({
       name: untick(row[0]),
       issuer: 'Udacity Institute of AI & Technology',
       date: untick(row[1] ?? ''),
     })),
-    ...tableRows(stibo).map((row) => ({
+    ...groups.stibo.map((row) => ({
       name: untick(row[0]),
       issuer: 'Stibo Systems',
       date: untick(row[1] ?? ''),
     })),
-    ...tableRows(serviceNow).map((row) => ({
+    ...groups.serviceNow.map((row) => ({
       name: untick(row[0]),
       issuer: 'ServiceNow',
       date: untick(row[1] ?? ''),
       status: untick(row[2] ?? 'expired'),
     })),
-    ...tableRows(other)
+    ...groups.other
       .filter((row) => untick(row[0]) === 'ITIL v4')
       .map((row) => ({
         name: 'ITIL v4',
@@ -188,9 +218,8 @@ export const parseRecord = (markdown) => {
   if (new Set(names).size !== names.length) fail('CAREER.md has duplicate certificate names');
 
   const careerText = groupBetween(markdown, '## Career record', '## Certifications');
-  const inventory = groupBetween(markdown, '## Project inventory', '### MSc capstone track');
   const projectNumbers = new Map(
-    tableRows(inventory)
+    inventoryRowsOf(markdown)
       .filter((row) => /^P[1-6]$/.test(row[0]))
       .map((row) => [row[1], row.slice(3).join(' ')]),
   );

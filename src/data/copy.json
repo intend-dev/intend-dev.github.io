@@ -1,6 +1,6 @@
 {
   "nav": {
-    "projects": "Selected projects",
+    "projects": "Projects",
     "work": "Work",
     "caseStudies": "Case studies"
   },
@@ -21,9 +21,6 @@
   },
   "projects": {
     "more": "More case studies"
-  },
-  "about": {
-    "focus": "My focus is clean data at the source, and AI output that can be checked"
   },
   "story": {
     "eyebrow": "My story",

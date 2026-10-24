@@ -18,8 +18,9 @@ import copy from '../data/copy.json';
           <!-- The Work menu item is commented by the owner on 2026-10-23: too much
                technical data in the menu for now; the all-six page stays live on /work
                (the CV PDF links it); restoring it means uncommenting this block here. -->
-          <a data-nav-key="about" href={withBase('/#about')}>{copy.sections.about}</a>
+          <a data-nav-key="about" href={withBase('/#story')}>{copy.sections.about}</a>
           <a data-nav-key="contact" href={withBase('/#contact')}>{copy.sections.contact}</a>
+          <span class="nav-underline" aria-hidden="true" hidden></span>
         </nav>
         <!-- Breadcrumb for the Work area. Absolute, so the bar keeps one height. -->
         <span class="nav-current" aria-hidden="true" hidden></span>
@@ -78,7 +79,6 @@ import copy from '../data/copy.json';
         { id: 'all-work', crumb: null },
         { id: 'capabilities', crumb: null },
         { id: 'story', crumb: null, nav: 'about' },
-        { id: 'about', crumb: null, nav: 'about' },
         { id: 'contact', crumb: null, nav: 'contact' },
       ]
         .map((section) => ({ ...section, element: document.getElementById(section.id) }))
@@ -126,6 +126,21 @@ import copy from '../data/copy.json';
         if (link.getAttribute('aria-current') === 'page') continue;
         if (current.nav && target === current.nav) link.setAttribute('aria-current', 'location');
         else link.removeAttribute('aria-current');
+      }
+      // The one shared underline slides to the active link instead of each link
+      // highlighting itself, so the eye follows a moving marker rather than a swap.
+      const marker = document.querySelector('.nav-underline');
+      if (marker) {
+        const active = [...links.values()].find((link) => link.getAttribute('aria-current'));
+        if (!active) {
+          marker.hidden = true;
+        } else {
+          marker.hidden = false;
+          marker.style.width = `${active.offsetWidth}px`;
+          marker.style.transform = `translateX(${active.offsetLeft}px)`;
+          marker.style.top = `${active.offsetTop + active.offsetHeight}px`;
+          marker.setAttribute('data-placed', '');
+        }
       }
     };
 

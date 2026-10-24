@@ -15,7 +15,6 @@
   --max: 1120px;
   --gutter: clamp(1.25rem, 4vw, 2.5rem);
   --measure-body: 100%;
-  --measure-note: 42ch;
   --measure-display: 22ch;
   --header-h: 7rem; /* generous no-JS fallback; Header.astro replaces it with the measured height */
 
@@ -164,7 +163,11 @@ svg {
   padding-block: var(--space-section);
 }
 
-.section + .section {
+/* The hero carries no .section, so the hero-to-work seam needs naming: before the About
+   section merged into the story, that section sat between hero and the featured cards
+   and carried the rule; the merge removed it and the rule vanished with it. */
+.section + .section,
+.hero + .section {
   border-top: var(--line);
 }
 
@@ -306,6 +309,7 @@ svg {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.35rem 1.25rem;
+  position: relative; /* hosts the sliding marker, which offsets against this box */
 }
 
 .site-nav a {
@@ -324,8 +328,28 @@ svg {
   color: var(--ink);
 }
 
-.site-nav a[aria-current] {
-  border-bottom-color: var(--accent);
+/* The one shared underline slides between links as the scrollspy marks a section;
+   per-link borders teleport, this one moves. data-placed arms the transition only
+   after the first placement, so the marker never sweeps in from the left edge. */
+.nav-underline {
+  position: absolute;
+  left: 0;
+  height: 2px;
+  width: 0;
+  background: var(--accent);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.nav-underline[data-placed] {
+  opacity: 1;
+  transition: transform 220ms ease, width 220ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-underline[data-placed] {
+    transition: none;
+  }
 }
 
 /* Icon buttons and inline icons. Every glyph is an inline <svg> from Icon.astro, so the
@@ -337,8 +361,7 @@ svg {
   flex: none;
 }
 
-.contact-links a,
-.footer-links a {
+.contact-links a {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
@@ -413,31 +436,15 @@ svg {
   padding-block: 2.5rem;
 }
 
-.site-footer .wrap {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
-  align-items: start;
-}
-
-.site-footer p {
+/* The footer's colophon line: exempt from any measure (capped, it wrapped with dangling
+   fragments), centered because it belongs to the page chrome, not to the left-flush
+   content above it; balance spreads its narrow-viewport wrap over even lines. */
+.site-footer .footer-copy {
   font-size: var(--step--1);
   color: var(--muted);
-  max-width: var(--measure-note);
-}
-
-.footer-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem 1.25rem;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.footer-links a {
-  font-size: var(--step--1);
-  overflow-wrap: anywhere;
+  max-width: none;
+  text-wrap: balance;
+  text-align: center;
 }
 
 /* Hero */

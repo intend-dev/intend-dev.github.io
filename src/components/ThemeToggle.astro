@@ -9,32 +9,44 @@ import Icon from './Icon.astro';
 
 <script is:inline>
   (() => {
-    const button = document.querySelector('[data-theme-toggle]');
-    if (!button) return;
-    button.hidden = false;
-    const root = document.documentElement;
+    // Wiring is re-entrant: a View-Transition swap can re-serve the header fresh
+    // (measured: a swap replaced the header and the new button ships hidden), so
+    // every incoming button is unhidden and bound exactly once (per element), and
+    // the swap hook re-runs the wiring. A persisted header keeps its wired button.
+    const wire = () => {
+      const button = document.querySelector('[data-theme-toggle]');
+      if (!button || button.__fmToggle) return;
+      button.__fmToggle = true;
+      button.hidden = false;
+      const root = document.documentElement;
 
-    // The label names the action, and the visible icon matches it: a moon in the light
-    // theme, a sun in the dark one. aria-pressed is deliberately absent, because a label
-    // that already says "switch to dark" would then contradict the pressed state.
-    const sync = () => {
-      const dark = root.dataset.theme === 'dark';
-      button.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
-      const colour = root.dataset[dark ? 'themeDark' : 'themeLight'];
-      for (const meta of document.querySelectorAll('meta[name="theme-color"]')) meta.content = colour;
-    };
+      // The label names the action, and the visible icon matches it: a moon in the light
+      // theme, a sun in the dark one. aria-pressed is deliberately absent, because a label
+      // that already says "switch to dark" would then contradict the pressed state.
+      const sync = () => {
+        const dark = root.dataset.theme === 'dark';
+        button.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+        const colour = root.dataset[dark ? 'themeDark' : 'themeLight'];
+        for (const meta of document.querySelectorAll('meta[name="theme-color"]')) meta.content = colour;
+      };
 
-    sync();
-
-    button.addEventListener('click', () => {
-      const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
-      root.dataset.theme = next;
-      try {
-        localStorage.setItem('theme', next);
-      } catch (error) {
-        // Storage can be unavailable; the session still switches.
-      }
       sync();
-    });
+
+      button.addEventListener('click', () => {
+        const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+        root.dataset.theme = next;
+        try {
+          localStorage.setItem('theme', next);
+        } catch (error) {
+          // Storage can be unavailable; the session still switches.
+        }
+        sync();
+      });
+    };
+    wire();
+    if (!window.__fmToggleSwap) {
+      window.__fmToggleSwap = true;
+      document.addEventListener('astro:after-swap', wire);
+    }
   })();
 </script>

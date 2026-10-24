@@ -25,30 +25,53 @@ const canonical = new URL(canonicalPath ?? Astro.url.pathname, Astro.site);
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <ClientRouter />
     <script is:inline>
-      let stored = null;
-      try {
-        stored = localStorage.getItem('theme');
-      } catch (error) {
-        // Storage can be blocked; fall back to the system preference.
-      }
-      const root = document.documentElement;
-      const dark = stored ? stored === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
-      root.dataset.theme = dark ? 'dark' : 'light';
-      // Both metas take the active colour once JS runs; without JS the media queries above
-      // keep the browser chrome in step with the system preference.
-      const colour = root.dataset[dark ? 'themeDark' : 'themeLight'];
-      // The html element is never swapped by the client router, so the theme attribute
-      // survives a page transition; the metas are re-rendered with the head, so their
-      // contents follow the active theme again on every swap.
-      const syncMeta = () => {
-        for (const meta of document.querySelectorAll('meta[name="theme-color"]')) meta.content = colour;
+      // Resolve the stored choice, then re-apply the full state (the html attribute and
+      // both metas). The re-apply is not optional: headless and real browsers alike
+      // measure that a View-Transition swap replaces the html element's attributes (the
+      // incoming page's server markup carries no data-theme), so without it every
+      // swap lands on the css default. after-swap runs before the new page paints.
+      const applyTheme = () => {
+        let stored = null;
+        try {
+          stored = localStorage.getItem('theme');
+        } catch (error) {
+          // Storage can be blocked; fall back to the default below.
+        }
+        // Light is the default (owner decision): only a stored choice or a toggle press
+        // lands on dark. The OS colour scheme no longer picks the theme for a visitor
+        // who never chose one.
+        const dark = stored ? stored === 'dark' : false;
+        const root = document.documentElement;
+        root.dataset.theme = dark ? 'dark' : 'light';
+        for (const meta of document.querySelectorAll('meta[name="theme-color"]')) {
+          meta.content = root.dataset[dark ? 'themeDark' : 'themeLight'];
+        }
       };
-      syncMeta();
+      // Header.astro's inline script does not survive swaps (its element ships fresh
+      // and scriptless, and its content dedupes away), so nothing re-measures the
+      // header there; a swap also replaces <html>, killing the measured --header-h
+      // with it. Measured: the sticky fact bars rode the 7rem fallback after a swap
+      // (a 25px gap at desktop, 11px under the phone menu). Re-measure alongside the
+      // theme, from the after-swap hook proven to survive.
+      const syncHeader = () => {
+        const header = document.querySelector('.site-header');
+        if (!header) return;
+        const height = Math.round(header.getBoundingClientRect().height);
+        if (height > 0) document.documentElement.style.setProperty('--header-h', `${height}px`);
+      };
+      applyTheme();
+      syncHeader();
       // One listener for the document's lifetime, however many times the swap re-runs
-      // this inline script.
-      if (!window.__fmThemeMeta) {
-        window.__fmThemeMeta = true;
-        document.addEventListener('astro:after-swap', syncMeta);
+      // this inline script. The after-swap measure can land before the incoming
+      // header's rows settle (measured: 122 mid-assembly, 174 settled at 320px), so
+      // it retries on the next frame.
+      if (!window.__fmTheme) {
+        window.__fmTheme = true;
+        document.addEventListener('astro:after-swap', () => {
+          applyTheme();
+          syncHeader();
+          requestAnimationFrame(syncHeader);
+        });
       }
     </script>
     <title>{title}</title>
