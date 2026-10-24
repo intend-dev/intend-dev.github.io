@@ -25,26 +25,19 @@ const canonical = new URL(canonicalPath ?? Astro.url.pathname, Astro.site);
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <ClientRouter />
     <script is:inline>
-      // Resolve the stored choice, then re-apply the full state (the html attribute and
-      // both metas). The re-apply is not optional: headless and real browsers alike
-      // measure that a View-Transition swap replaces the html element's attributes (the
-      // incoming page's server markup carries no data-theme), so without it every
-      // swap lands on the css default. after-swap runs before the new page paints.
+      // Re-apply the full state (the html attribute and both metas). Everyone lands light
+      // (owner decision, 2026-10-24): the OS colour scheme and storage are ignored on
+      // load. A toggle press switches for the session and survives swaps; nothing is
+      // stored, so the next visit opens light again. The re-apply is not optional:
+      // headless and real browsers alike measure that a View-Transition swap replaces
+      // the html element's attributes (the incoming page's server markup carries no
+      // data-theme), so without it every swap lands on the css default. after-swap runs
+      // before the new page paints.
       const applyTheme = () => {
-        let stored = null;
-        try {
-          stored = localStorage.getItem('theme');
-        } catch (error) {
-          // Storage can be blocked; fall back to the default below.
-        }
-        // Light is the default (owner decision): only a stored choice or a toggle press
-        // lands on dark. The OS colour scheme no longer picks the theme for a visitor
-        // who never chose one.
-        const dark = stored ? stored === 'dark' : false;
         const root = document.documentElement;
-        root.dataset.theme = dark ? 'dark' : 'light';
+        root.dataset.theme = window.__fmSessionTheme === 'dark' ? 'dark' : 'light';
         for (const meta of document.querySelectorAll('meta[name="theme-color"]')) {
-          meta.content = root.dataset[dark ? 'themeDark' : 'themeLight'];
+          meta.content = root.dataset[root.dataset.theme === 'dark' ? 'themeDark' : 'themeLight'];
         }
       };
       // Header.astro's inline script does not survive swaps (its element ships fresh

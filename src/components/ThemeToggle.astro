@@ -35,11 +35,9 @@ import Icon from './Icon.astro';
       button.addEventListener('click', () => {
         const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
         root.dataset.theme = next;
-        try {
-          localStorage.setItem('theme', next);
-        } catch (error) {
-          // Storage can be unavailable; the session still switches.
-        }
+        // The press is a session choice only: it survives in-site swaps, and the next
+        // visit opens light again (owner decision: everyone lands light).
+        window.__fmSessionTheme = next;
         sync();
       });
     };
