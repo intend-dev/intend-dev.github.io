@@ -90,7 +90,7 @@ const capabilities = [
       <ul class="project-cards">
         {featured.map((project) => <ProjectCard project={project} />)}
       </ul>
-      <p class="case-more">{copy.projects.more} <a href={withBase('/work')}>{copy.work.heading}</a>.</p>
+      <p class="case-more"><a href={withBase('/work')}>{copy.projects.more}</a>.</p>
       <p class="disclosure">{copy.work.disclosure}</p>
     </div>
   </section>
