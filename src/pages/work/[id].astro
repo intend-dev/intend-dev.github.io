@@ -2,18 +2,38 @@
 import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import CaseStudyBody from '../../components/CaseStudyBody.astro';
+import CardArt from '../../components/CardArt.astro';
+import TagList from '../../components/TagList.astro';
 import { withBase } from '../../lib/url';
 import copy from '../../data/copy.json';
 
 export async function getStaticPaths() {
-  const projects = await getCollection('projects', ({ data }) => data.status === 'completed' && !data.draft);
-  return projects.map((project) => ({ params: { id: project.id }, props: { project } }));
+  const ordered = (await getCollection('projects', ({ data }) => data.status === 'completed' && !data.draft)).sort(
+    (a, b) => a.data.order - b.data.order,
+  );
+  return ordered.map((project, index) => ({
+    params: { id: project.id },
+    props: {
+      project,
+      prev: index > 0 ? ordered[index - 1] : null,
+      next: index < ordered.length - 1 ? ordered[index + 1] : null,
+    },
+  }));
 }
 
-const { project } = Astro.props;
+const { project, prev, next } = Astro.props;
 // The study's Markdown headings are h2 in the source and keep that level here: the page
 // has no other content level between them and the h1.
 const html = project.rendered?.html ?? '';
+// The chain never dead-ends: the first study's previous slot and the last study's next
+// slot both return to the portfolio's projects section on the home page.
+const homeTitle = copy.nav.projects;
+const prevLink = prev
+  ? { kicker: copy.study.previous, href: withBase(`/work/${prev.id}/`), title: prev.data.title }
+  : { kicker: null, href: withBase('/#work'), title: homeTitle };
+const nextLink = next
+  ? { kicker: copy.study.next, href: withBase(`/work/${next.id}/`), title: next.data.title }
+  : { kicker: null, href: withBase('/#work'), title: homeTitle };
 ---
 
 <BaseLayout
@@ -26,8 +46,63 @@ const html = project.rendered?.html ?? '';
       <p class="back-link"><a href={withBase('/work')}>&larr; {copy.work.heading}</a></p>
       <h1>{project.data.title}</h1>
       <p class="study-lede">{project.data.summary}</p>
+
+      <div class="study-art">
+        <CardArt slug={project.id} />
+      </div>
+
       <CaseStudyBody project={project} html={html} />
+
       <p class="disclosure">{copy.work.disclosure}</p>
+
+      <div class="study-meta">
+        <dl>
+          <div>
+            <dt>Course project</dt>
+            <dd>{project.data.courseProject}</dd>
+          </div>
+          <div>
+            <dt>Course</dt>
+            <dd>{project.data.course}</dd>
+          </div>
+          <div>
+            <dt>Year</dt>
+            <dd>{project.data.year}</dd>
+          </div>
+          <div>
+            <dt>Role</dt>
+            <dd>{project.data.role}</dd>
+          </div>
+          <div>
+            <dt>Stack</dt>
+            <dd><TagList items={project.data.stack} /></dd>
+          </div>
+          {project.data.links.length > 0 && (
+            <div>
+              <dt>Links</dt>
+              <dd>
+                {project.data.links.map((link) => (
+                  <a href={link.href} target="_blank" rel="noopener noreferrer">{link.label}<span class="sr-only new-tab-note"> (opens in a new tab)</span></a>
+                ))}
+              </dd>
+            </div>
+          )}
+        </dl>
+        {project.data.links.length === 0 && (
+          <p class="private-note">Code is private. Architecture and evidence are documented here.</p>
+        )}
+      </div>
+
+      <nav class="study-nav" aria-label="Case studies">
+        <a class="study-nav-link study-nav-prev" href={prevLink.href}>
+          {prevLink.kicker && <span class="study-nav-kicker">&larr; {prevLink.kicker}</span>}
+          <span class="study-nav-title">{prevLink.title}</span>
+        </a>
+        <a class="study-nav-link study-nav-next" href={nextLink.href}>
+          {nextLink.kicker && <span class="study-nav-kicker">{nextLink.kicker} &rarr;</span>}
+          <span class="study-nav-title">{nextLink.title}</span>
+        </a>
+      </nav>
     </div>
   </article>
 </BaseLayout>

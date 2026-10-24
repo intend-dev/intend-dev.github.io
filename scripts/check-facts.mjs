@@ -74,6 +74,7 @@ for (const file of projectFiles) {
   const frontmatter = source.slice(0, source.indexOf('---', 3));
   const title = frontmatter.match(/^title:\s*"(.+)"$/m)?.[1];
   const courseProject = frontmatter.match(/^courseProject:\s*"(.+)"$/m)?.[1];
+  const course = frontmatter.match(/^course:\s*"(.+)"$/m)?.[1];
   const order = Number(frontmatter.match(/^order:\s*(\d+)$/m)?.[1]);
   const featured = /^featured:\s*true$/m.test(frontmatter);
   const slug = file.replace(/\.md$/, '');
@@ -100,6 +101,11 @@ for (const file of projectFiles) {
   } else {
     const studyText = stripHtml(readFileSync(studyPage, 'utf8'));
     if (title && !studyText.includes(title)) problems.push(`${file}: title missing from its study page`);
+    // The meta strip's labels are strip-specific (the prose never carries them), so
+    // this asserts the strip rendered with its data rather than an empty shell.
+    for (const label of ['Course project', 'Course', 'Year', 'Role']) {
+      if (!studyText.includes(label)) problems.push(`${file}: the study page misses its ${label} meta`);
+    }
   }
   if (title && featured && !home.includes(title)) problems.push(`${file}: featured title missing from the profile`);
 }

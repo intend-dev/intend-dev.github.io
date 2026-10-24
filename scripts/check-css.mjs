@@ -123,8 +123,10 @@ const PRINT_CONTENT = new Set([
   '.card-link',
   '.card-art',
   '.study',
+  '.study-art',
+  '.study-meta',
+  '.study-nav',
   '.prose',
-  '.case-layout',
   '.case-flow',
   '.chips',
 ]);

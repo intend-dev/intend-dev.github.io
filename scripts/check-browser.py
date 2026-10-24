@@ -234,12 +234,14 @@ PRINT_STATE = """
 (async () => {
   const flow = document.querySelector('.case-flow');
   const prose = document.querySelector('.prose');
-  const sidebar = document.querySelector('.sidebar');
+  const meta = document.querySelector('.study-meta');
   return {
     flowBorders: [getComputedStyle(flow).borderTopWidth, getComputedStyle(flow).borderBottomWidth],
     proseHeight: Math.round(prose.getBoundingClientRect().height),
     lede: getComputedStyle(document.querySelector('.study-lede')).display,
-    sidebarPosition: getComputedStyle(sidebar).position,
+    metaDisplay: getComputedStyle(meta).display,
+    metaH: Math.round(meta.getBoundingClientRect().height),
+    navLinks: document.querySelectorAll('.study-nav a').length,
   };
 })()
 """
@@ -340,6 +342,12 @@ def main() -> int:
 
         viewport(cdp, 1280, 900)
         goto(cdp, origin)
+
+        # Headless Chrome defaults prefers-reduced-motion to reduce, which silences the
+        # site's motion by design; set the no-motion preference the way a real browser
+        # arrives, once, before any further load. The reduced-motion assertions override
+        # it explicitly and restore it afterwards.
+        media(cdp, "", [{"name": "prefers-reduced-motion", "value": "no-preference"}])
 
         # No JavaScript: the cards are plain links, a study page is a plain document,
         # and the toggle stays hidden.
@@ -497,7 +505,7 @@ def main() -> int:
         expect("Icons: decorative SVGs are hidden from assistive tech", icons["hidden"] is True)
         expect("Icons: no external SVG references", icons["external"] == 0)
         expect("Icons: every link keeps an accessible name", all(label for label in icons["labels"]))
-        media(cdp, "")
+        media(cdp, "", [{"name": "prefers-reduced-motion", "value": "no-preference"}])
 
         # The index page: at rest nothing is highlighted, and a row opens the study's
         # own page.
@@ -521,8 +529,15 @@ def main() -> int:
             "})()"
         )
         cdp.evaluate("document.querySelector('.project-row .row-link').click()")
-        wait_for(cdp, "document.readyState === 'complete'")
-        expect("the clicked row opened its study page", settle_ready(cdp, javascript=True), counted=False)
+        # Not settle_ready: during a View-Transition swap the pathname still reads the
+        # index for a moment, which would settle instantly on the index's own six rows
+        # and probe mid-swap. The index never carries the study's flow; waiting for it
+        # here is race-free under both a full load and a client-side swap.
+        expect(
+            "the clicked row opened its study page",
+            wait_for(cdp, "document.querySelectorAll('.case-flow li').length >= 3", timeout=5),
+            counted=False,
+        )
         study = cdp.evaluate(
             """
 (() => ({
@@ -547,6 +562,100 @@ def main() -> int:
             f"Study page: nothing highlighted, crumb hidden ({study['nav']})",
             study["nav"] == [] and study["crumbHidden"] is True,
         )
+        slug = row["href"].strip("/").split("/")[-1]
+        pair = cdp.evaluate(
+            "(() => { const svg = document.querySelector('.study-art svg');"
+            " return { name: getComputedStyle(svg).viewTransitionName, normalised: svg.querySelectorAll('[pathLength=\"1\"]').length, shapes: svg.querySelectorAll('path, rect, circle').length, drawing: svg.hasAttribute('data-drawing') }; })()"
+        )
+        expect(
+            f"Study page: the opening art pairs with its card and carries its full geometry ({pair['name']}, {pair['normalised']}/{pair['shapes']})",
+            pair["name"] == f"study-{slug}"
+            and pair["normalised"] == pair["shapes"]
+            and pair["shapes"] >= 6,
+        )
+        nav_row = cdp.evaluate(
+            """
+(() => [...document.querySelectorAll('.study-nav .study-nav-link')].map((a) => ({ href: a.getAttribute('href'), title: a.querySelector('.study-nav-title').textContent.trim() })))()
+"""
+        )
+        expect(
+            f"Study page: the chain opens and closes this page ({json.dumps(nav_row)})",
+            len(nav_row) == 2
+            and nav_row[0]["href"] == "/#work"
+            and nav_row[1]["href"] == "/work/ai-development-harness/",
+        )
+
+        # The last study by order: both ends return home, the previous slot pointing at
+        # study five. The load is query-differentiated so Chrome carries no scroll in:
+        # the page opens at the top, and at a desktop viewport the art sits in view, so
+        # the draw runs immediately on load.
+        viewport(cdp, 1280, 900)
+        goto(cdp, f"{origin}work/ai-budget-predicter/?load")
+        last = cdp.evaluate(
+            """
+(() => ({
+  nav: [...document.querySelectorAll('.study-nav .study-nav-link')].map((a) => a.getAttribute('href')),
+  artName: getComputedStyle(document.querySelector('.study-art svg')).viewTransitionName,
+  artDrawing: document.querySelector('.study-art svg').hasAttribute('data-drawing'),
+}))()
+"""
+        )
+        expect(
+            f"Study page: the last study returns home on both ends ({json.dumps(last['nav'])})",
+            last["nav"] == ["/work/multimodal-moderation/", "/#work"],
+        )
+        expect(
+            f"Study page: the last study's art pairs with its card ({last['artName']})",
+            last["artName"] == "study-ai-budget-predicter",
+        )
+        # The art sits in view at a top load, so it draws immediately: motion is
+        # guaranteed to be seen on every study page.
+        expect(
+            f"Study page: the opening art draws on load (drawing {last['artDrawing']})",
+            last["artDrawing"] is True,
+        )
+
+        # The no-wrap guarantee at a desktop width: the study title keeps one line and
+        # the exhibit spans the section width like the prose beside it.
+        nowrap_study = cdp.evaluate(
+            """
+(() => {
+  const h1 = document.querySelector('h1');
+  const lh = parseFloat(getComputedStyle(h1).lineHeight);
+  const wrap = document.querySelector('.study .wrap').getBoundingClientRect();
+  const art = document.querySelector('.study-art').getBoundingClientRect();
+  return { lines: Math.round(h1.getBoundingClientRect().height / lh), artW: Math.round(art.width), wrapW: Math.round(wrap.width) };
+})()
+"""
+        )
+        expect(
+            f"Study page: the title keeps one line at desktop ({nowrap_study['lines']} lines)",
+            nowrap_study["lines"] == 1,
+        )
+        expect(
+            f"Study page: the exhibit spans the section width ({nowrap_study['artW']} of {nowrap_study['wrapW']})",
+            nowrap_study["artW"] == nowrap_study["wrapW"],
+        )
+        last = cdp.evaluate(
+            """
+(() => {
+  const h1 = document.querySelector('h1').offsetTop;
+  const strip = document.querySelector('.study-meta').offsetTop;
+  const nav = document.querySelector('.study-nav').offsetTop;
+  const toggle = document.querySelector('.theme-toggle');
+  const tr = toggle.getBoundingClientRect();
+  return { h1Top: h1, stripTop: strip, navTop: nav, toggle: { hidden: toggle.hidden, w: Math.round(tr.width), h: Math.round(tr.height), x: Math.round(tr.x) } };
+})()
+"""
+        )
+        expect(
+            f"Study page: the strip closes the page before the chain (h1 {last['h1Top']}, strip {last['stripTop']}, chain {last['navTop']})",
+            last["stripTop"] > last["h1Top"] + 250 and last["navTop"] > last["stripTop"],
+        )
+        expect(
+            f"Theme: the toggle sits visible on a study page too ({last['toggle']['x']}, {last['toggle']['w']}x{last['toggle']['h']}, hidden {last['toggle']['hidden']})",
+            last["toggle"]["hidden"] is False and last["toggle"]["w"] > 0 and last["toggle"]["h"] > 0 and last["toggle"]["x"] > 1000,
+        )
 
         # Print: the study keeps its timeline spacing without a rule of its own, and
         # its content stays on the page.
@@ -562,8 +671,8 @@ def main() -> int:
             printed["proseHeight"] > 0 and printed["lede"] != "none",
         )
         expect(
-            f"Print: the sidebar stops sticking ({printed['sidebarPosition']})",
-            printed["sidebarPosition"] == "static",
+            f"Print: the strip and the chain print ({printed['metaDisplay']}, {printed['metaH']}px, {printed['navLinks']} links)",
+            printed["metaDisplay"] != "none" and printed["metaH"] > 0 and printed["navLinks"] == 2,
         )
 
         # The real print output, not just the emulated media.
@@ -577,11 +686,12 @@ def main() -> int:
         except Exception as error:  # noqa: BLE001 - reported as a failed assertion
             expect(f"PDF: the printed study could be parsed ({error})", False)
         expect(f"PDF: the printed study spans several A4 pages ({page_count} pages)", page_count > 1)
+        printed_h1 = cdp.evaluate("document.querySelector('h1')?.textContent.trim() ?? ''")
         expect(
             "PDF: the printed study carries its title",
-            row["title"] in re.sub(r"\s+", " ", text),
+            printed_h1 != "" and printed_h1 in re.sub(r"\s+", " ", text),
         )
-        media(cdp, "")
+        media(cdp, "", [{"name": "prefers-reduced-motion", "value": "no-preference"}])
 
         # The header bar keeps one midline: the wordmark, the nav links, and the toggle
         # all share a vertical center instead of hanging off the wordmark's baseline.
@@ -614,6 +724,156 @@ def main() -> int:
                 timeout=2,
             ),
         )
+
+        # Motion: reveal and self-draw. The hero never starts hidden, art below the fold
+        # waits hidden and draws once on entry, the effect shifts no layout, and reduced
+        # motion holds everything in its finished state. The short viewport puts the
+        # cards below the fold deterministically; the media override matters too:
+        # headless defaults to reduce, so the motion assertions set no-preference
+        # explicitly, the way a real browser arrives.
+        viewport(cdp, 1280, 700)
+        media(cdp, "", [{"name": "prefers-reduced-motion", "value": "no-preference"}])
+        # Chrome carries the outgoing document's recorded scroll into a same-URL
+        # navigation (and the record is debounced, so a scroll-to-top does not help).
+        # A query-differentiated URL is a fresh history entry: it always loads at the
+        # top, where the arts sit at ~933px: below this viewport's fold, waiting.
+        goto(cdp, f"{origin}?motion")
+        motion = cdp.evaluate(
+            """
+(() => {
+  const arts = [...document.querySelectorAll('svg[data-draw]')];
+  return {
+    total: arts.length,
+    pending: arts.filter((svg) => svg.hasAttribute('data-draw-pending')).length,
+    drawing: arts.filter((svg) => svg.hasAttribute('data-drawing')).length,
+    tops: arts.map((svg) => Math.round(svg.getBoundingClientRect().top)),
+    scrollY: Math.round(window.scrollY),
+    innerH: window.innerHeight,
+    paths: arts.filter((svg) => [...svg.querySelectorAll(':scope > :is(path, rect, circle)')].slice(0, 3).every((shape) => shape.getAttribute('pathLength') === '1')).length,
+    names: [...arts].map((svg) => getComputedStyle(svg).viewTransitionName),
+    capTop: document.getElementById('capabilities').offsetTop,
+  };
+})()
+"""
+        )
+        expect(
+            f"Motion: three card arts wait below the fold to self-draw (pending {motion['pending']}/{motion['total']}, tops {motion['tops']}, scroll {motion['scrollY']}, drawing {motion['drawing']})",
+            motion["total"] == 3 and motion["pending"] == 3 and motion["scrollY"] == 0,
+        )
+        expect(
+            f"Motion: every card art normalises its dash via pathLength ({motion['paths']}/3)",
+            motion["paths"] == 3,
+        )
+        expect(
+            f"Motion: the card arts pair with their study pages ({json.dumps(motion['names'])})",
+            all(name.startswith("study-") for name in motion["names"]),
+        )
+        frame = cdp.evaluate(
+            """
+(() => {
+  const ul = document.querySelector('.project-cards');
+  const ulCs = getComputedStyle(ul);
+  const card = getComputedStyle(document.querySelector('.project-card'));
+  const toggle = document.querySelector('.theme-toggle');
+  const tr = toggle.getBoundingClientRect();
+  return {
+    listStyle: ulCs.listStyleType,
+    ulPad: ulCs.paddingLeft,
+    borderTop: card.borderTopStyle,
+    bg: card.backgroundColor,
+    radius: card.borderRadius,
+    toggle: { hidden: toggle.hidden, w: Math.round(tr.width), h: Math.round(tr.height), x: Math.round(tr.x), y: Math.round(tr.y) },
+  };
+})()
+"""
+        )
+        expect(
+            f"Cards: the list shows no bullets and the row keeps its framed surface (list-style {frame['listStyle']}, pad {frame['ulPad']}, border {frame['borderTop']}, radius {frame['radius']})",
+            frame["listStyle"] == "none"
+            and frame["ulPad"] == "0px"
+            and frame["borderTop"] != "none"
+            and frame["bg"] != "rgba(0, 0, 0, 0)"
+            and frame["radius"] == "12px",
+        )
+        expect(
+            f"Theme: the toggle sits visible in the header ({frame['toggle']['x']}, {frame['toggle']['y']}, {frame['toggle']['w']}x{frame['toggle']['h']}, hidden {frame['toggle']['hidden']})",
+            frame["toggle"]["hidden"] is False and frame["toggle"]["w"] > 0 and frame["toggle"]["h"] > 0 and frame["toggle"]["x"] > 1000,
+        )
+        # An instant scroll: the page's smooth-scroll behavior makes scrollIntoView a
+        # long glide, and the IO events landing mid-glide are exactly the
+        # nondeterminism this block must not read through. scroll-padding-top snaps the
+        # jump short of the section's true top, and the check scrolls a further viewport
+        # only for the drawn state: with the third art inside the observer's cut, all
+        # three must show drawn; before that point a pending third art is correct.
+        cdp.evaluate(
+            "(() => {"
+            " document.querySelector('#work').scrollIntoView({ block: 'start', behavior: 'instant' });"
+            " return true; })()"
+        )
+        drawn = wait_for(
+            cdp,
+            "document.querySelectorAll('svg[data-draw][data-drawing]').length >= 2",
+            timeout=4,
+        )
+        expect(
+            f"Motion: the arts draw as they enter the viewport ({'two entered and drawing' if drawn else 'did not draw in time'})",
+            drawn,
+        )
+        hover = cdp.evaluate(
+            """
+(() => {
+  const card = document.querySelector('.project-card');
+  const box = card.getBoundingClientRect();
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2, settled: box.top };
+})()
+"""
+        )
+        cdp.call("Input.dispatchMouseEvent", {"type": "mouseMoved", "x": hover["x"], "y": hover["y"]})
+        time.sleep(0.25)
+        lifted = cdp.evaluate(
+            "(() => { const c = document.querySelector('.project-card'); return { transform: getComputedStyle(c).transform, shadow: getComputedStyle(c, '::after').opacity }; })()"
+        )
+        expect(
+            f"Motion: the card lifts on hover (transform {lifted['transform']}, shadow layer {lifted['shadow']})",
+            lifted["transform"] != "none" and lifted["shadow"] == "1",
+        )
+        cdp.call("Input.dispatchMouseEvent", {"type": "mouseMoved", "x": 4, "y": 4})
+        # The no-wrap guarantee at a desktop width: card titles keep one line, and the
+        # art sits beside the text (its column ends before the text column starts).
+        nowrap = cdp.evaluate(
+            """
+(() => {
+  const lines = (el) => Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight));
+  const cards = [...document.querySelectorAll('.project-card')];
+  const art = cards[0].querySelector('.card-art').getBoundingClientRect();
+  const text = cards[0].querySelector('.card-text').getBoundingClientRect();
+  return {
+    titleLines: cards.map((c) => lines(c.querySelector('.card-title'))),
+    artRight: Math.round(art.right),
+    textLeft: Math.round(text.x),
+  };
+})()
+"""
+        )
+        expect(
+            f"Cards: the study titles keep one line at desktop ({json.dumps(nowrap['titleLines'])})",
+            all(lines == 1 for lines in nowrap["titleLines"]) and len(nowrap["titleLines"]) == 3,
+        )
+        expect(
+            f"Cards: the art sits beside its text ({nowrap['artRight']} <= {nowrap['textLeft']})",
+            nowrap["artRight"] <= nowrap["textLeft"],
+        )
+        # The third art rides below the -10% cut at this rest point; one more viewport
+        # brings it in, and the chain's state machine must complete at a full stroke.
+        cdp.evaluate("(() => { window.scrollBy({ top: window.innerHeight, behavior: 'instant' }); return true; })()")
+        fully = wait_for(
+            cdp,
+            "(() => { const arts = [...document.querySelectorAll('svg[data-draw]')];"
+            " return arts.length === 3 && arts.every((s) => s.hasAttribute('data-drawing'))"
+            " && getComputedStyle(document.querySelector('svg[data-drawing] :is(path, rect, circle)')).strokeDashoffset === '0px'; })()",
+            timeout=4,
+        )
+        expect("Motion: every art finished drawing at a full stroke", fully)
         midline = cdp.evaluate(
             """
 (async () => {
@@ -695,6 +955,41 @@ def main() -> int:
             )
             is True,
         )
+        # Motion under reduced-motion emulation: everything sits in its final state,
+        # nothing ever waits hidden.
+        media(cdp, "", [{"name": "prefers-reduced-motion", "value": "reduce"}])
+        cdp.evaluate("(() => { window.scrollTo({ top: 0, behavior: 'instant' }); return true; })()")
+        reload(cdp)
+        reduced = cdp.evaluate(
+            """
+(() => {
+  const arts = [...document.querySelectorAll('svg[data-draw]')];
+  const wraps = [...document.querySelectorAll('[data-reveal]')];
+  return {
+    pendingArt: arts.filter((svg) => svg.hasAttribute('data-draw-pending')).length,
+    pendingReveal: wraps.filter((el) => el.hasAttribute('data-pending')).length,
+    revealed: wraps.length > 0 && wraps.every((el) => el.hasAttribute('data-revealed')),
+    cardOpacity: getComputedStyle(document.querySelector('.project-card')).opacity,
+  };
+})()
+"""
+        )
+        expect(
+            f"Motion: reduced motion holds everything in its final state (pending {reduced['pendingArt']} + {reduced['pendingReveal']})",
+            reduced["pendingArt"] == 0
+            and reduced["pendingReveal"] == 0
+            and reduced["revealed"]
+            and reduced["cardOpacity"] == "1",
+        )
+        expect(
+            "Motion: no third-party scripts or stylesheets",
+            cdp.evaluate(
+                "[...document.scripts].every((s) => !s.src || s.src.startsWith(location.origin))"
+                " && [...document.querySelectorAll('link[rel=\"stylesheet\"], link[rel=\"icon\"]')].every((l) => l.href.startsWith(location.origin))"
+            )
+            is True,
+        )
+        media(cdp, "", [{"name": "prefers-reduced-motion", "value": "no-preference"}])
         media(cdp, "print")
         printed_fact = cdp.evaluate(
             "(() => { const s = document.querySelector('#experience > .fact-summary'); "
@@ -718,7 +1013,7 @@ def main() -> int:
             f"Print: the card art stays on the page ({card_art['display']}, {card_art['height']}px)",
             card_art["display"] != "none" and card_art["height"] > 0,
         )
-        media(cdp, "")
+        media(cdp, "", [{"name": "prefers-reduced-motion", "value": "no-preference"}])
 
         # The committed CV PDF must still describe the page it claims to represent.
         # Text only: this catches a stale artifact, not a font difference. Page counts are

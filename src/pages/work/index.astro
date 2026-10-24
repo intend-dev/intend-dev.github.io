@@ -18,7 +18,7 @@ const projects = (await getCollection('projects', ({ data }) => data.status === 
        outline and assistive tech without repeating itself on screen. -->
   <h1 class="sr-only">{copy.nav.caseStudies}</h1>
   <section class="section" id="all-work">
-    <div class="wrap">
+    <div class="wrap" data-reveal>
       <SectionHeading title={copy.work.heading} note={copy.work.note} />
       <ul class="project-list">
         {projects.map((project) => <ProjectRow project={project} />)}

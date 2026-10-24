@@ -10,6 +10,7 @@ interface Props {
 
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import { ClientRouter } from 'astro:transitions';
 import { withBase } from '../lib/url';
 import '../styles/global.css';
 
@@ -22,6 +23,7 @@ const canonical = new URL(canonicalPath ?? Astro.url.pathname, Astro.site);
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <ClientRouter />
     <script is:inline>
       let stored = null;
       try {
@@ -35,7 +37,19 @@ const canonical = new URL(canonicalPath ?? Astro.url.pathname, Astro.site);
       // Both metas take the active colour once JS runs; without JS the media queries above
       // keep the browser chrome in step with the system preference.
       const colour = root.dataset[dark ? 'themeDark' : 'themeLight'];
-      for (const meta of document.querySelectorAll('meta[name="theme-color"]')) meta.content = colour;
+      // The html element is never swapped by the client router, so the theme attribute
+      // survives a page transition; the metas are re-rendered with the head, so their
+      // contents follow the active theme again on every swap.
+      const syncMeta = () => {
+        for (const meta of document.querySelectorAll('meta[name="theme-color"]')) meta.content = colour;
+      };
+      syncMeta();
+      // One listener for the document's lifetime, however many times the swap re-runs
+      // this inline script.
+      if (!window.__fmThemeMeta) {
+        window.__fmThemeMeta = true;
+        document.addEventListener('astro:after-swap', syncMeta);
+      }
     </script>
     <title>{title}</title>
     <meta name="description" content={description} />
@@ -59,5 +73,71 @@ const canonical = new URL(canonicalPath ?? Astro.url.pathname, Astro.site);
       <slot />
     </main>
     <Footer />
+    <script is:inline>
+      (() => {
+        // Reveal and self-draw: the markup is always the finished state. Pending states
+        // are applied by this script only when the effect will actually run, so a
+        // no-JS visitor, a reduced-motion visitor, and any print never see hidden
+        // content. Nothing above the fold is ever hidden, so the hero's first paint is
+        // exactly what it would be without this script.
+        const still = typeof matchMedia !== 'undefined' && !matchMedia('(prefers-reduced-motion: no-preference)').matches;
+        const markRevealed = () => {
+          for (const el of document.querySelectorAll('[data-reveal]:not([data-revealed])')) el.setAttribute('data-revealed', '');
+        };
+        if (still || !('IntersectionObserver' in window)) {
+          markRevealed();
+          // Self-draw: with motion suppressed the finished diagram is the default.
+          if (!window.__fmRevealDoc) {
+            window.__fmRevealDoc = true;
+            document.addEventListener('astro:page-load', markRevealed);
+          }
+          return;
+        }
+        const bind = () => {
+          for (const el of document.querySelectorAll('[data-reveal]:not([data-revealed])')) {
+            if (el.getBoundingClientRect().top < window.innerHeight) {
+              el.setAttribute('data-revealed', '');
+              continue;
+            }
+            // The pending state starts hidden only where the media query allows motion.
+            el.setAttribute('data-pending', '');
+            io.observe(el);
+          }
+          for (const el of document.querySelectorAll('svg[data-draw]:not([data-drawing])')) {
+            // Every art draws once per load: art already in view draws immediately (the
+            // visitor watches it start to finish), art below the fold waits to be seen.
+            if (el.getBoundingClientRect().top >= window.innerHeight) {
+              el.setAttribute('data-draw-pending', '');
+              io.observe(el);
+              continue;
+            }
+            el.setAttribute('data-drawing', '');
+          }
+        };
+        if (!window.__fmReveal) {
+          window.__fmReveal = true;
+          window.__fmRevealIO = new IntersectionObserver(
+            (entries) => {
+              for (const entry of entries) {
+                if (!entry.isIntersecting) continue;
+                const el = entry.target;
+                if (el.matches('svg[data-draw]')) {
+                  el.removeAttribute('data-draw-pending');
+                  el.setAttribute('data-drawing', '');
+                } else {
+                  el.removeAttribute('data-pending');
+                  el.setAttribute('data-revealed', '');
+                }
+                window.__fmRevealIO.unobserve(el);
+              }
+            },
+            { rootMargin: '0px 0px -10% 0px', threshold: 0.05 },
+          );
+          document.addEventListener('astro:page-load', bind);
+        }
+        const io = window.__fmRevealIO;
+        bind();
+      })();
+    </script>
   </body>
 </html>

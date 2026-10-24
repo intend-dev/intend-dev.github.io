@@ -6,7 +6,7 @@ import copy from '../data/copy.json';
 
 <div class="scroll-sentinel" aria-hidden="true"></div>
 
-<header class="site-header">
+<header class="site-header" transition:persist>
   <div class="wrap">
     <a class="wordmark" href={withBase('/')}>Francisco Mateus</a>
     <div class="header-actions">
@@ -40,21 +40,31 @@ import copy from '../data/copy.json';
     };
 
     sync();
-    window.addEventListener('resize', sync);
-    if ('ResizeObserver' in window) new ResizeObserver(sync).observe(header);
     if (document.fonts) document.fonts.ready.then(sync);
 
-    const sentinel = document.querySelector('.scroll-sentinel');
-    if (sentinel && 'IntersectionObserver' in window) {
-      new IntersectionObserver(([entry]) => {
-        header.toggleAttribute('data-scrolled', !entry.isIntersecting);
-      }).observe(sentinel);
+    // The header persists across View Transitions, so this script runs once per full
+    // load and re-resolves per page swap; the guards keep the listeners single even
+    // if the browser ever re-runs the script.
+    if (!window.__fmHeaderRO && 'ResizeObserver' in window) {
+      window.__fmHeaderRO = true;
+      new ResizeObserver(sync).observe(header);
     }
 
-    // Section tracking: name the last section whose top passed the reading horizon.
-    // The label names the section in the header. About and Contact have their own
-    // underlined link, so they stay unnamed here instead of saying the same word twice.
-    // This script runs before <main>, so the sections are resolved after parsing.
+    let scrolledObserver = null;
+    let sections = [];
+    let links = new Map();
+    let atEnd = false;
+
+    let pending = false;
+    const schedule = () => {
+      if (pending) return;
+      pending = true;
+      requestAnimationFrame(() => {
+        pending = false;
+        update();
+      });
+    };
+
     const trackSections = () => {
       const label = document.querySelector('.nav-current');
       if (!label) return;
@@ -62,7 +72,7 @@ import copy from '../data/copy.json';
       // Each page contributes the sections it renders; entries that do not exist are
       // filtered out, so a study page, which tracks none of them, keeps the breadcrumb
       // hidden and no link highlighted.
-      const sections = [
+      sections = [
         { id: 'overview', crumb: null },
         { id: 'work', crumb: null, nav: 'projects' },
         { id: 'all-work', crumb: null },
@@ -72,60 +82,63 @@ import copy from '../data/copy.json';
         { id: 'contact', crumb: null, nav: 'contact' },
       ]
         .map((section) => ({ ...section, element: document.getElementById(section.id) }))
-        .filter(({ element }) => element);
+        .filter((section) => section.element);
 
       if (sections.length === 0) return;
 
-      const links = new Map();
+      links = new Map();
       for (const link of document.querySelectorAll('.site-nav a')) {
         if (link.dataset.navKey) links.set(link.dataset.navKey, link);
       }
 
-      let atEnd = false;
-
-      const update = () => {
-        const height = header.getBoundingClientRect().height;
-        const horizon = window.scrollY + height + 24;
-        let current = sections[0];
-        for (const section of sections) {
-          if (section.element.getBoundingClientRect().top + window.scrollY <= horizon) current = section;
-        }
-        // A short final section can sit below the horizon on a tall viewport.
-        if (atEnd) current = sections[sections.length - 1];
-        label.textContent = current.crumb ?? '';
-        label.hidden = !current.crumb;
-        for (const [target, link] of links) {
-          if (link.getAttribute('aria-current') === 'page') continue;
-          if (current.nav && target === current.nav) link.setAttribute('aria-current', 'location');
-          else link.removeAttribute('aria-current');
-        }
-      };
-
-      let pending = false;
-      const schedule = () => {
-        if (pending) return;
-        pending = true;
-        requestAnimationFrame(() => {
-          pending = false;
-          update();
-        });
-      };
-
-      window.addEventListener('scroll', schedule, { passive: true });
-      window.addEventListener('resize', schedule);
-      update();
-      if (document.fonts) document.fonts.ready.then(update);
-
       const end = document.querySelector('.scroll-end');
       if (end && 'IntersectionObserver' in window) {
-        new IntersectionObserver(([entry]) => {
-          atEnd = entry.isIntersecting && document.documentElement.scrollHeight > innerHeight + 2;
-          update();
-        }).observe(end);
+        if (!scrolledObserver) {
+          scrolledObserver = new IntersectionObserver(([entry]) => {
+            atEnd = entry.isIntersecting && document.documentElement.scrollHeight > innerHeight + 2;
+            update();
+          });
+        }
+        scrolledObserver.disconnect();
+        scrolledObserver.observe(end);
+      }
+      update();
+      if (document.fonts) document.fonts.ready.then(update);
+    };
+
+    const update = () => {
+      if (sections.length === 0) return;
+      const height = header.getBoundingClientRect().height;
+      const horizon = window.scrollY + height + 24;
+      let current = sections[0];
+      for (const section of sections) {
+        if (section.element.getBoundingClientRect().top + window.scrollY <= horizon) current = section;
+      }
+      // A short final section can sit below the horizon on a tall viewport.
+      if (atEnd) current = sections[sections.length - 1];
+      // The crumb label resolves per call: study pages have none and stay clean.
+      const crumbLabel = document.querySelector('.nav-current');
+      if (crumbLabel) {
+        crumbLabel.textContent = current.crumb ?? '';
+        crumbLabel.hidden = !current.crumb;
+      }
+      for (const [target, link] of links) {
+        if (link.getAttribute('aria-current') === 'page') continue;
+        if (current.nav && target === current.nav) link.setAttribute('aria-current', 'location');
+        else link.removeAttribute('aria-current');
       }
     };
 
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', trackSections);
-    else trackSections();
+    if (!window.__fmHeaderTracking) {
+      window.__fmHeaderTracking = true;
+      window.addEventListener('scroll', schedule, { passive: true });
+      window.addEventListener('resize', schedule);
+      document.addEventListener('astro:page-load', () => {
+        sync();
+        trackSections();
+      });
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', trackSections);
+      else trackSections();
+    }
   })();
 </script>
