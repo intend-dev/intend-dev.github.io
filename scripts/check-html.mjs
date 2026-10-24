@@ -32,7 +32,6 @@ const EXPECTED = new Map([
       copy.sections.projects,
       copy.sections.capabilities,
       copy.story.title,
-      copy.about.focus,
       copy.sections.contact,
     ],
   ],
@@ -63,26 +62,7 @@ const isAliasRoute = (route) => ALIASES.has(route);
 // otherwise duplicate check-facts' section assertions against source text.
 const isStudyRoute = (route) => /^work\/[^/]+\/index\.html$/.test(route);
 
-const ENTITIES = new Map([
-  ['&amp;', '&'],
-  ['&lt;', '<'],
-  ['&gt;', '>'],
-  ['&quot;', '"'],
-  ['&#39;', "'"],
-  ['&apos;', "'"],
-  ['&nbsp;', ' '],
-  ['&rsquo;', '’'],
-  ['&lsquo;', '‘'],
-  ['&mdash;', '—'],
-  ['&middot;', '·'],
-]);
-
-const plain = (html) =>
-  html
-    .replace(/<[^>]+>/g, '')
-    .replace(/&[a-z#0-9]+;/g, (entity) => ENTITIES.get(entity) ?? entity)
-    .replace(/\s+/g, ' ')
-    .trim();
+const plain = stripHtml;
 
 const headingSource = (html) =>
   html

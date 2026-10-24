@@ -11,31 +11,46 @@ import { profile } from '../data/profile';
 </div>
 
 <script is:inline>
-  for (const button of document.querySelectorAll('[data-copy-email]')) {
-    // Read the label once: reading it after a click would capture "Copied".
-    const label = button.textContent;
-    let timer;
-    const flash = (text) => {
-      button.textContent = text;
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        button.textContent = label;
-      }, 1500);
-    };
+  (() => {
+    // Wiring is re-entrant: a View-Transition swap re-serves the home body fresh and
+    // body scripts do not re-run after a swap, so an incoming button ships unbound
+    // (measured: home -> study -> home left the button copying nothing). Each button
+    // binds exactly once (per element); the page-load hook re-runs the wiring.
+    const wire = () => {
+      for (const button of document.querySelectorAll('[data-copy-email]')) {
+        if (button.__fmCopy) continue;
+        button.__fmCopy = true;
+        // Read the label once: reading it after a click would capture "Copied".
+        const label = button.textContent;
+        let timer;
+        const flash = (text) => {
+          button.textContent = text;
+          clearTimeout(timer);
+          timer = setTimeout(() => {
+            button.textContent = label;
+          }, 1500);
+        };
 
-    button.addEventListener('click', async () => {
-      const email = button.getAttribute('data-copy-email');
-      if (!email) return;
-      if (!navigator.clipboard) {
-        flash('Copy unavailable');
-        return;
+        button.addEventListener('click', async () => {
+          const email = button.getAttribute('data-copy-email');
+          if (!email) return;
+          if (!navigator.clipboard) {
+            flash('Copy unavailable');
+            return;
+          }
+          try {
+            await navigator.clipboard.writeText(email);
+            flash('Copied');
+          } catch (error) {
+            flash('Copy failed');
+          }
+        });
       }
-      try {
-        await navigator.clipboard.writeText(email);
-        flash('Copied');
-      } catch (error) {
-        flash('Copy failed');
-      }
-    });
-  }
+    };
+    wire();
+    if (!window.__fmCopyWire) {
+      window.__fmCopyWire = true;
+      document.addEventListener('astro:page-load', wire);
+    }
+  })();
 </script>

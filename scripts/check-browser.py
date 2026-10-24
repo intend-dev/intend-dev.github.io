@@ -435,6 +435,17 @@ def main() -> int:
             theme_initial["theme"] == "light" and theme_initial["moon"] != "none" and theme_initial["sun"] == "none",
         )
 
+        # The owner's default: light is what a visitor opens regardless of the OS colour
+        # scheme; only a stored choice (or a later press) lands on dark.
+        cdp.evaluate("(() => { try { localStorage.removeItem('theme'); } catch (e) {} return true; })()")
+        media(cdp, "", [{"name": "prefers-reduced-motion", "value": "no-preference"}, {"name": "prefers-color-scheme", "value": "dark"}])
+        reload(cdp)
+        fresh_dark_os = cdp.evaluate("document.documentElement.dataset.theme")
+        expect(
+            f"Theme: a fresh visitor on a dark-OS machine opens light (theme {fresh_dark_os})",
+            fresh_dark_os == "light",
+        )
+
         flipped = cdp.evaluate(
             """
 (() => {
@@ -480,6 +491,106 @@ def main() -> int:
             == "light",
         )
 
+        # The owner's bug, at its reproducible point: with the light choice stored, a
+        # click through the View Transition into a study page used to land on the css
+        # default theme with the toggle hidden (the swap replaces the html attributes
+        # and re-serves the header fresh). The re-apply hooks must keep both alive.
+        card = cdp.evaluate("document.querySelector('.project-card .card-link')?.getAttribute('href')")
+        cdp.evaluate("(() => { document.querySelector('.project-card .card-link').click(); return true; })()")
+        wait_for(cdp, f"location.pathname === '{card.rstrip('/')}/'")
+        swapped = cdp.evaluate(
+            """
+(() => {
+  const button = document.querySelector('[data-theme-toggle]');
+  const box = button.getBoundingClientRect();
+  return {
+    theme: document.documentElement.dataset.theme || 'none',
+    toggleHidden: button.hidden,
+    toggleW: Math.round(box.width),
+    toggleH: Math.round(box.height),
+  };
+})()
+"""
+        )
+        expect(
+            f"View transition swaps: the light theme and the toggle survive into a study page (theme {swapped['theme']}, toggle hidden {swapped['toggleHidden']}, {swapped['toggleW']}x{swapped['toggleH']})",
+            swapped["theme"] == "light"
+            and swapped["toggleHidden"] is False
+            and swapped["toggleW"] > 0
+            and swapped["toggleH"] > 0,
+        )
+        # The toggle still works on the swapped page: a press switches the theme there.
+        swapped_flip = cdp.evaluate(
+            "(() => { const b = document.querySelector('[data-theme-toggle]'); b.click(); "
+            "const t = document.documentElement.dataset.theme; b.click(); return t; })()"
+        )
+        expect(
+            f"View transition swaps: the toggle still works on the swapped page (press returned {swapped_flip})",
+            swapped_flip == "dark",
+        )
+        # The same defect class, measured on 2026-10-24: home -> study -> back left the
+        # copy-email button bound to nothing (body scripts do not re-run after a swap).
+        # Back-navigation is a swap here, so the flash must still fire on the way back.
+        cdp.evaluate("(() => { history.back(); return true; })()")
+        wait_for(cdp, "!!document.querySelector('[data-copy-email]')")
+        copy_before = cdp.evaluate("document.querySelector('[data-copy-email]')?.textContent")
+        cdp.evaluate("(() => { document.querySelector('[data-copy-email]')?.click(); return true; })()")
+        time.sleep(0.25)
+        copy_after = cdp.evaluate("document.querySelector('[data-copy-email]')?.textContent")
+        expect(
+            f"View transition swaps: the copy button survives the round trip ({copy_before} -> {copy_after})",
+            copy_before == "Copy email" and copy_after not in ("Copy email", None),
+        )
+        # Same swap class, measured 2026-10-24: the swap replaces <html>, killing the
+        # measured --header-h, and the sticky fact bars rode the 7rem fallback — a 25px
+        # gap at desktop, 11px under the phone menu. After the round trip the open bar
+        # must sit flush under the header again.
+        cdp.evaluate("(() => { document.querySelector('#certifications > .fact-summary')?.click(); return true; })()")
+        time.sleep(0.2)
+        # Same swap class, measured 2026-10-24: a swap replaces <html>, killing the
+        # measured --header-h, and the sticky fact bars (plus every scroll jump) then
+        # ride the 7rem fallback - a 25px gap at desktop, 11px under the phone menu.
+        # BaseLayout's surviving after-swap hook re-measures; assert the variable equals
+        # the real header height, which pins every consumer flush by construction.
+        sticky_var = cdp.evaluate(
+            """
+(() => {
+  const header = document.querySelector('.site-header').getBoundingClientRect().height;
+  const raw = getComputedStyle(document.documentElement).getPropertyValue('--header-h').trim();
+  const parsed = parseFloat(raw);
+  return { raw, parsed, header: Math.round(header), toggleY: Math.round(document.querySelector('[data-theme-toggle]')?.getBoundingClientRect().y ?? -1), scrollY: Math.round(scrollY), markerPos: getComputedStyle(document.querySelector('.nav-underline') || document.body).position, markerHidden: document.querySelector('.nav-underline')?.hidden, navKids: [...document.querySelectorAll('.site-nav > *')].map((el) => el.className || el.tagName), fixed: raw.endsWith('px') && !isNaN(parsed) };
+})()
+"""
+        )
+        expect(
+            f"View transition swaps: the header height variable is re-measured ({sticky_var['raw']} vs header {sticky_var['header']}px, toggleY {sticky_var['toggleY']}, markerPos {sticky_var['markerPos']}, hidden {sticky_var['markerHidden']}, kids {sticky_var['navKids']})",
+            sticky_var["fixed"]
+            and abs(sticky_var["parsed"] - sticky_var["header"]) <= 2,
+        )
+        cdp.evaluate("(() => { try { localStorage.removeItem('theme'); } catch (e) {} return true; })()")
+        cdp.evaluate("(() => { try { localStorage.removeItem('theme'); } catch (e) {} return true; })()")
+        goto(cdp, origin)
+
+        # The phone-width header: the menu label is short enough that the toggle keeps
+        # the nav's row instead of dropping to a lone third row (the defect the owner
+        # reported on a phone at 390). Asserted at 390, inside the narrowed header's
+        # own media range; at 320 and below the toggle still drops, by design.
+        viewport(cdp, 390, 700)
+        header_phone = cdp.evaluate(
+            """
+(() => {
+  const row = (el) => Math.round(el.getBoundingClientRect().y);
+  const nav = document.querySelector('.site-nav');
+  const toggle = document.querySelector('.theme-toggle');
+  return { navY: row(nav), toggleY: row(toggle), headerH: Math.round(document.querySelector('.site-header').getBoundingClientRect().height), label: nav.textContent.trim() };
+})()
+"""
+        )
+        expect(
+            f"Theme toggle: at phone width the toggle keeps the nav's row, header {header_phone['headerH']}px (label '{header_phone['label'][:16]}')",
+            header_phone["toggleY"] == header_phone["navY"] and header_phone["headerH"] < 150,
+        )
+
         icons = cdp.evaluate(
             """
 (() => {
@@ -501,7 +612,7 @@ def main() -> int:
 """
         )
         expect(f"Icons: 3 on the contact links, saw {icons['contact']}", icons["contact"] == 3)
-        expect(f"Icons: 4 on the footer links, saw {icons['footer']}", icons["footer"] == 4)
+        expect(f"Icons: none on the footer, links live in the contact section (saw {icons['footer']})", icons["footer"] == 0)
         expect("Icons: decorative SVGs are hidden from assistive tech", icons["hidden"] is True)
         expect("Icons: no external SVG references", icons["external"] == 0)
         expect("Icons: every link keeps an accessible name", all(label for label in icons["labels"]))
@@ -708,8 +819,15 @@ def main() -> int:
             [item["key"] for item in nav_state] == ["projects", "about", "contact"],
         )
         expect(
-            "Nav: projects points at the home work section, about at the home about section",
-            nav_state[0]["href"].endswith("#work") and nav_state[1]["href"].endswith("#about"),
+            "Nav: projects points at the home work section, about opens the person cluster at the story",
+            nav_state[0]["href"].endswith("#work") and nav_state[1]["href"].endswith("#story"),
+        )
+        # The merged About cluster: the owner folded the story and the facts into one
+        # section (dropping the restating About heading); the facts must live inside the
+        # story section, and the old standalone section must not return.
+        expect(
+            "About cluster: the facts sit inside the story section and no standalone About section remains",
+            cdp.evaluate("!!document.querySelector('#story .facts') && !document.querySelector('#about')"),
         )
         expect(
             "Nav: the work item stays out of the menu (commented by decision)",
@@ -911,6 +1029,80 @@ def main() -> int:
         expect(
             f"Contact: one separation, not two (above {balance['above']}px, below {balance['below']}px)",
             balance["below"] <= balance["above"] + 8,
+        )
+
+        # The hero is not a .section, so the work seam needs naming (the About section used
+        # to sit between them and carried the rule; the merge deleted it with the seam).
+        work_seam = cdp.evaluate(
+            "getComputedStyle(document.querySelector('#work')).borderTopWidth"
+        )
+        expect(
+            f"Hero: the featured-projects section keeps its top rule (border {work_seam})",
+            work_seam == "1px",
+        )
+
+        # Footer: one copy line (privacy + copyright), no links (the contact section owns
+        # them), centered in the container, one line at desktop width.
+        footer_rows = cdp.evaluate(
+            """
+(() => {
+  const wrap = document.querySelector('.site-footer .wrap');
+  const copy = document.querySelector('.site-footer .footer-copy');
+  if (!copy) return { missing: true };
+  const row = copy.getBoundingClientRect();
+  const wrapRect = wrap.getBoundingClientRect();
+  const range = document.createRange();
+  range.selectNodeContents(copy);
+  const wrapCenter = (wrapRect.left + wrapRect.right) / 2;
+  const offCenter = Math.max(
+    ...[...range.getClientRects()]
+      .filter((r) => r.width > 1)
+      .map((r) => Math.abs((r.left + r.right) / 2 - wrapCenter)),
+  );
+  return {
+    offCenter: Math.round(offCenter * 10) / 10,
+    copyOnly: document.querySelectorAll('.site-footer .footer-copy').length === 1,
+    noLinks: document.querySelectorAll('.site-footer .footer-links, .site-footer a').length === 0,
+    singleLine: Math.round(row.height) < 1.6 * parseFloat(getComputedStyle(copy).lineHeight),
+  };
+})()
+"""
+        )
+        expect(
+            f"Footer: one copy line, no links, centered, single line at desktop ({footer_rows})",
+            footer_rows.get("copyOnly")
+            and footer_rows.get("noLinks")
+            and footer_rows.get("singleLine")
+            and footer_rows.get("offCenter", 99) < 2,
+        )
+
+        # The scrollspy underline: one shared marker slides to the active link instead of
+        # each link painting its own border. Asserted at two scroll points: the marker
+        # must sit on the active link's box (±2px) and move between sections.
+        marker_track = []
+        for target in ("#work", "#story"):
+            cdp.evaluate(
+                f"(() => {{ window.scrollTo({{ top: document.querySelector('{target}').getBoundingClientRect().top + scrollY + 40, behavior: 'instant' }}); return true; }})()"
+            )
+            time.sleep(0.3)
+            marker_track.append(
+                cdp.evaluate(
+                    """
+(() => {
+  const marker = document.querySelector('.nav-underline');
+  const active = document.querySelector('.site-nav a[aria-current]');
+  if (!marker || marker.hidden || !active) return { active: null, dx: null, dw: null };
+  const m = marker.getBoundingClientRect();
+  const a = active.getBoundingClientRect();
+  return { active: active.textContent.trim(), dx: Math.round(m.left - a.left), dw: Math.round(m.width - a.width) };
+})()
+"""
+                )
+            )
+        expect(
+            f"Menu marker: the sliding underline sits on the active link at two scroll points ({json.dumps(marker_track)})",
+            all(track["dx"] is not None and abs(track["dx"]) <= 2 and abs(track["dw"]) <= 2 for track in marker_track)
+            and {track["active"] for track in marker_track} == {"Projects", "About me"},
         )
 
         # Sticky fact header: an open About section keeps its title pinned under the site

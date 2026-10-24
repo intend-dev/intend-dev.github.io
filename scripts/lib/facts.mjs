@@ -11,13 +11,30 @@ const PHONE_SHAPES = [
 
 export const hasPhone = (text) => PHONE_SHAPES.some((pattern) => pattern.test(text));
 
+// The single entity map every HTML-text comparison uses. check-html folds entities in
+// headings with it; stripHtml uses it for whole-page text, so a record-vs-page match
+// never fails over a typographic apostrophe or middle dot.
+export const ENTITIES = new Map([
+  ['&amp;', '&'],
+  ['&lt;', '<'],
+  ['&gt;', '>'],
+  ['&quot;', '"'],
+  ['&#39;', "'"],
+  ['&apos;', "'"],
+  ['&nbsp;', ' '],
+  ['&rsquo;', '’'],
+  ['&lsquo;', '‘'],
+  ['&mdash;', '—'],
+  ['&middot;', '·'],
+]);
+
+const unescapeEntity = (entity) => ENTITIES.get(entity) ?? entity;
+
 export const stripHtml = (html) =>
   html
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
     .replace(/<style[\s\S]*?<\/style>/gi, ' ')
     .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&#39;/g, "'")
+    .replace(/&[a-z#0-9]+;/g, unescapeEntity)
     .replace(/\s+/g, ' ')
     .trim();
