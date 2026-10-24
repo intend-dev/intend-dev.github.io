@@ -1,0 +1,26 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import CardArt from './CardArt.astro';
+import { withBase } from '../lib/url';
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+}
+
+const { project } = Astro.props;
+const number = String(project.data.order).padStart(2, '0');
+---
+
+<!-- One card is one link: the study lives on its own page, and the card carries no
+     body of its own. The whole card is the anchor so the whole surface is clickable. -->
+<li class="project-card">
+  <a class="card-link" href={withBase(`/work/${project.id}/`)}>
+    <CardArt slug={project.id} />
+    <span class="card-text">
+      <span class="card-kicker">Case study {number}</span>
+      <h3 class="card-title">{project.data.title}</h3>
+      <span class="card-summary">{project.data.summary}</span>
+      <span class="card-go">Read the study <span aria-hidden="true">&rarr;</span></span>
+    </span>
+  </a>
+</li>

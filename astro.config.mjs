@@ -9,14 +9,13 @@ export default defineConfig({
   output: 'static',
   integrations: [
     sitemap({
-      // /work/ is a real page and belongs in the sitemap; the /work/<slug>/ redirects
-      // and the other alias pages stay out. The filter receives full URLs.
+      // /work/ and every /work/<slug>/ study page are real pages and belong in the
+      // sitemap; the alias pages stay out. The filter receives full URLs.
       filter: (page) =>
         !page.endsWith('/404/') &&
         !page.endsWith('/404') &&
         !page.endsWith('/cv/') &&
         !page.endsWith('/cv') &&
-        !(page.includes('/work/') && !page.endsWith('/work/')) &&
         !page.endsWith('/about/') &&
         !page.endsWith('/about'),
     }),

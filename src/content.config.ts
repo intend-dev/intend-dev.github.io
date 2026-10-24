@@ -33,6 +33,8 @@ const projects = defineCollection({
       .default([]),
     code: z.enum(['public', 'private']).default('private'),
     draft: z.boolean().default(false),
+    // Featured studies render as cards on the profile; every study gets its own page.
+    featured: z.boolean().default(false),
   }),
 });
 

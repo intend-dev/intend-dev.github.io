@@ -3,6 +3,7 @@ title: "A NASA RAG system that forces a citation on every sentence"
 courseProject: "NASA Mission RAG"
 summary: "Answers over 16,497 NASA chunks, with a balanced two-pass retriever, a citation on every sentence, and a RAGAS loop in the app."
 order: 3
+featured: true
 status: completed
 course: "Generative AI"
 year: "2026"

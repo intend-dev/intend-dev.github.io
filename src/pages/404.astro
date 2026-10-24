@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { withBase } from '../lib/url';
+import copy from '../data/copy.json';
 ---
 
 <BaseLayout title="Page not found · Francisco Mateus" description="That page is not here." noindex canonicalPath={withBase('/')}>
@@ -10,7 +11,7 @@ import { withBase } from '../lib/url';
     <p class="lede">The link may be out of date. The work and the record are still where they should be.</p>
     <div class="actions">
       <a class="button button--solid" href={withBase('/')}>Home</a>
-      <a class="button" href={withBase('/#work')}>Work</a>
+      <a class="button" href={withBase('/#work')}>{copy.nav.projects}</a>
     </div>
   </div>
 </BaseLayout>

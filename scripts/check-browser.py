@@ -5,8 +5,9 @@
 """Behavioural check for what the static checks cannot see.
 
 Drives the built dist/ in headless Chromium over CDP and asserts the no-JS fallback on
-both pages, print media, the real printed PDF, the theme toggle, icons, the sticky
-case-study and fact headers, and the header midline.
+all three surfaces (the profile cards, the work index, the study pages), print media,
+the real printed PDF, the theme toggle, icons, the sticky fact headers, and the header
+midline.
 
 The PDF assertion prints through Page.printToPDF and reads the text layer with pypdf;
 `websockets` is capped below 18 because the CDP session outlives a `with` block and uses
@@ -192,10 +193,14 @@ def wait_for(cdp: CDP, expression: str, timeout: float = 5.0) -> bool:
 
 
 def settle_ready(cdp: CDP, javascript: bool) -> bool:
-    """The case-study rows are static markup, so their count is the render signal:
-    three on the profile page, six on the work page."""
-    expected = 6 if "/work" in cdp.evaluate("location.pathname") else 3
-    return wait_for(cdp, f"document.querySelectorAll('.project-row').length === {expected}")
+    """Each page carries its own render signal: three study cards on the profile, six
+    index rows on the work page, and the study's flow on every study page."""
+    path = cdp.evaluate("location.pathname")
+    if re.search(r"^/work/[^/]+", path):
+        return wait_for(cdp, "document.querySelectorAll('.case-flow li').length >= 3")
+    if path.rstrip("/").endswith("/work"):
+        return wait_for(cdp, "document.querySelectorAll('.project-row').length === 6")
+    return wait_for(cdp, "document.querySelectorAll('.project-card').length === 3")
 
 
 def goto(cdp: CDP, url: str, javascript: bool = True) -> None:
@@ -227,27 +232,14 @@ def media(cdp: CDP, media_type: str, features: list[dict] | None = None) -> None
 
 PRINT_STATE = """
 (async () => {
-  document.querySelector('details.case-disclosure summary').click();
-  await new Promise((done) => setTimeout(done, 250));
-  const row = document.querySelector('details.case-disclosure[open]');
-  const summary = row.querySelector('summary');
-  const line = row.querySelector('.flow > li');
-  const headerBottom = summary.getBoundingClientRect().bottom;
-  const lineTop = line.getBoundingClientRect().top;
-  const doubled = [...row.querySelectorAll('*')].filter((el) => {
-    const computed = getComputedStyle(el);
-    const rect = el.getBoundingClientRect();
-    return parseFloat(computed.borderTopWidth) > 0 && computed.borderTopStyle !== 'none'
-      && rect.width > 500 && rect.top > headerBottom + 0.5 && rect.top < lineTop - 0.5;
-  }).length;
+  const flow = document.querySelector('.case-flow');
+  const prose = document.querySelector('.prose');
+  const sidebar = document.querySelector('.sidebar');
   return {
-    flowBorders: [
-      getComputedStyle(row.querySelector('.case-flow')).borderTopWidth,
-      getComputedStyle(row.querySelector('.case-flow')).borderBottomWidth,
-    ],
-    doubled,
-    summaryShadow: getComputedStyle(summary).boxShadow,
-    summaryPosition: getComputedStyle(summary).position,
+    flowBorders: [getComputedStyle(flow).borderTopWidth, getComputedStyle(flow).borderBottomWidth],
+    proseHeight: Math.round(prose.getBoundingClientRect().height),
+    lede: getComputedStyle(document.querySelector('.study-lede')).display,
+    sidebarPosition: getComputedStyle(sidebar).position,
   };
 })()
 """
@@ -349,46 +341,51 @@ def main() -> int:
         viewport(cdp, 1280, 900)
         goto(cdp, origin)
 
-        # No JavaScript: the content stays readable and the toggle stays hidden.
+        # No JavaScript: the cards are plain links, a study page is a plain document,
+        # and the toggle stays hidden.
         scripts_enabled(cdp, False)
         reload(cdp, javascript=False)
+        card_links = cdp.evaluate("[...document.querySelectorAll('.project-card .card-link')].map((a) => a.pathname)")
         expect(
-            "No-JS: the profile shows its three featured case studies",
-            cdp.evaluate("document.querySelectorAll('.case-disclosure').length") == 3,
+            "No-JS: the profile shows its three featured cards",
+            cdp.evaluate("document.querySelectorAll('.project-card').length") == 3,
         )
         expect(
-            "No-JS: a case study opens natively",
-            cdp.evaluate(
-                "(() => {"
-                " const d = document.querySelector('.case-disclosure');"
-                " d.querySelector('summary').click();"
-                " return d.open && d.querySelector('.row-body').getBoundingClientRect().height > 0;"
-                "})()"
-            )
-            is True,
+            f"No-JS: each card links to a distinct study page ({json.dumps(card_links)})",
+            len(card_links) == 3
+            and len(set(card_links)) == 3
+            and all(re.match(r"^/work/[^/]+/$", link) for link in card_links),
         )
         expect(
             "No-JS: the theme toggle stays hidden",
             cdp.evaluate("document.querySelector('[data-theme-toggle]').hidden") is True,
         )
-        # All six studies live on the work page; they must stay present and openable
-        # there without JavaScript too.
-        cdp.call("Page.navigate", {"url": f"{origin}work/"})
+        # A study page is a real document: it carries its own content without any script.
+        cdp.call("Page.navigate", {"url": f"{origin}{card_links[0].lstrip('/')}"})
         wait_for(cdp, "document.readyState === 'complete'")
         expect(
-            "No-JS: the work page shows all six case studies",
-            cdp.evaluate("document.querySelectorAll('.case-disclosure').length") == 6,
-        )
-        expect(
-            "No-JS: a work-page case study opens natively",
+            "No-JS: a study page renders its own document (h1, flow, prose)",
             cdp.evaluate(
                 "(() => {"
-                " const d = document.querySelector('.case-disclosure');"
-                " d.querySelector('summary').click();"
-                " return d.open && d.querySelector('.row-body').getBoundingClientRect().height > 0;"
+                " const h1 = document.querySelector('h1');"
+                " return document.querySelectorAll('.case-flow li').length >= 3"
+                " && document.querySelectorAll('.prose h2').length >= 6"
+                " && h1 && h1.textContent.trim().length > 0;"
                 "})()"
             )
             is True,
+        )
+        # All six studies stay reachable from the work page index without JavaScript.
+        cdp.call("Page.navigate", {"url": f"{origin}work/"})
+        wait_for(cdp, "document.readyState === 'complete'")
+        row_links = cdp.evaluate("[...document.querySelectorAll('.project-row .row-link')].map((a) => a.pathname)")
+        expect(
+            "No-JS: the work page lists all six studies",
+            cdp.evaluate("document.querySelectorAll('.project-row').length") == 6,
+        )
+        expect(
+            f"No-JS: each work row links to a distinct study page ({len(row_links)} links)",
+            len(row_links) == 6 and len(set(row_links)) == 6,
         )
         scripts_enabled(cdp, True)
         goto(cdp, origin)
@@ -502,9 +499,8 @@ def main() -> int:
         expect("Icons: every link keeps an accessible name", all(label for label in icons["labels"]))
         media(cdp, "")
 
-        # Switching rows: opening another case study closes the first, and the new row
-        # must start under the site header rather than mid-body. The six-study set
-        # lives on the work page.
+        # The index page: at rest nothing is highlighted, and a row opens the study's
+        # own page.
         goto(cdp, f"{origin}work/")
         expect(
             "Breadcrumb: hidden at rest on the work page (nothing is highlighted either)",
@@ -518,184 +514,74 @@ def main() -> int:
                 timeout=2,
             ),
         )
-        cdp.evaluate("document.querySelectorAll('.case-disclosure')[0].open = true")
-        time.sleep(0.15)
-        cdp.evaluate(
+        row = cdp.evaluate(
             "(() => {"
-            " const ds = [...document.querySelectorAll('.case-disclosure')];"
-            " window.scrollTo({ top: ds[0].getBoundingClientRect().top + window.scrollY + 300, behavior: 'instant' });"
-            " const s = ds[2].querySelector('summary').getBoundingClientRect();"
-            " window.scrollBy({ top: s.top - 700, behavior: 'instant' });"
-            " ds[2].querySelector('summary').click();"
+            " const row = document.querySelector('.project-row .row-link');"
+            " return { title: row.querySelector('.project-title').textContent.trim(), href: row.pathname };"
             "})()"
         )
-        time.sleep(0.3)
-        switched = cdp.evaluate(
-            "(() => {"
-            " const d = [...document.querySelectorAll('.case-disclosure')][2];"
-            " const s = d.querySelector('summary').getBoundingClientRect();"
-            " const b = d.querySelector('.row-body').getBoundingClientRect();"
-            " const h = document.querySelector('.site-header').getBoundingClientRect().height;"
-            " return { open: d.open, summaryTop: Math.round(s.top), bodyTop: Math.round(b.top), header: Math.round(h) };"
-            "})()"
-        )
-        expect(
-            f"Switching rows: the opened row aligns under the header (summary {switched['summaryTop']}, header {switched['header']})",
-            switched["open"] and abs(switched["summaryTop"] - switched["header"]) <= 2,
-        )
-        expect(
-            f"Switching rows: the opened body starts below its summary (body {switched['bodyTop']}, summary {switched['summaryTop']})",
-            switched["bodyTop"] > switched["summaryTop"],
-        )
-        crumb = cdp.evaluate(
+        cdp.evaluate("document.querySelector('.project-row .row-link').click()")
+        wait_for(cdp, "document.readyState === 'complete'")
+        expect("the clicked row opened its study page", settle_ready(cdp, javascript=True), counted=False)
+        study = cdp.evaluate(
             """
-(() => {
-  const label = document.querySelector('.nav-current');
-  const ds = [...document.querySelectorAll('.case-disclosure')];
-  return { text: label.textContent, current: ds[2].dataset.navLabel, hidden: label.hidden, nav: [...document.querySelectorAll('.site-nav a[aria-current]')].map((a) => a.dataset.navKey) };
-})()
+(() => ({
+  h1: document.querySelector('h1')?.textContent.trim(),
+  back: document.querySelector('.back-link a')?.getAttribute('href'),
+  crumbHidden: document.querySelector('.nav-current').hidden,
+  nav: [...document.querySelectorAll('.site-nav a[aria-current]')].map((a) => a.dataset.navKey),
+  sections: document.querySelectorAll('.prose h2').length,
+  metrics: document.querySelectorAll('.metric-grid .metric').length,
+}))()
 """
         )
         expect(
-            f"Breadcrumb: the sub-level only ({crumb['text']!r})",
-            crumb["text"] == crumb["current"] and crumb["hidden"] is False,
+            f"Study page: the clicked row opens its own study ({study['h1']!r})",
+            study["h1"] == row["title"] and study["sections"] >= 6 and study["metrics"] >= 2,
         )
         expect(
-            f"Nav: no link highlights inside a study (the work link is out of the menu) ({crumb['nav']})",
-            crumb["nav"] == [],
+            f"Study page: the back link returns to the index ({study['back']})",
+            study["back"] == "/work",
+        )
+        expect(
+            f"Study page: nothing highlighted, crumb hidden ({study['nav']})",
+            study["nav"] == [] and study["crumbHidden"] is True,
         )
 
-        # Print: the case study flow and the row header keep their behaviour.
+        # Print: the study keeps its timeline spacing without a rule of its own, and
+        # its content stays on the page.
         viewport(cdp, 794, 1123)
         media(cdp, "print")
         printed = cdp.evaluate(PRINT_STATE)
         expect(
-            f"Print: the case-flow wraps without its own rule ({'/'.join(printed['flowBorders'])})",
+            f"Print: the case-flow keeps its spacing without a border of its own ({'/'.join(printed['flowBorders'])})",
             all(value == "0px" for value in printed["flowBorders"]),
         )
         expect(
-            f"Print: no extra rule between the row header and the timeline ({printed['doubled']})",
-            printed["doubled"] == 0,
+            f"Print: the study prose stays visible ({printed['proseHeight']}px, lede {printed['lede']})",
+            printed["proseHeight"] > 0 and printed["lede"] != "none",
         )
         expect(
-            "Print: the row header paints no stuck edge",
-            printed["summaryShadow"] == "none" and printed["summaryPosition"] == "static",
+            f"Print: the sidebar stops sticking ({printed['sidebarPosition']})",
+            printed["sidebarPosition"] == "static",
         )
 
         # The real print output, not just the emulated media.
         pdf_result = cdp.call("Page.printToPDF", {"printBackground": False, "preferCSSPageSize": True})
         page_count = 0
+        text = ""
         try:
             reader = PdfReader(io.BytesIO(base64.b64decode(pdf_result["data"])))
             page_count = len(reader.pages)
+            text = "".join(page.extract_text() or "" for page in reader.pages)
         except Exception as error:  # noqa: BLE001 - reported as a failed assertion
-            expect(f"PDF: the printed file could be parsed ({error})", False)
-        expect(f"PDF: the print produced a multi-page A4 document ({page_count} pages)", page_count > 1)
+            expect(f"PDF: the printed study could be parsed ({error})", False)
+        expect(f"PDF: the printed study spans several A4 pages ({page_count} pages)", page_count > 1)
+        expect(
+            "PDF: the printed study carries its title",
+            row["title"] in re.sub(r"\s+", " ", text),
+        )
         media(cdp, "")
-
-        # Sticky row header: the edge appears while pinned and disappears again.
-        viewport(cdp, 1568, 900)
-        reload(cdp)
-        cdp.evaluate(
-            "(() => { const details = document.querySelector('details.case-disclosure'); "
-            "details.querySelector('summary').click(); window.scrollTo(0, 0); return true; })()"
-        )
-        time.sleep(0.35)
-        # Let the scroll handler settle after the row expands, then read the resting state
-        # from wherever the page actually ended up.
-        at_rest_cleared = wait_for(
-            cdp,
-            "!document.querySelector('details.case-disclosure[open] > summary').hasAttribute('data-stuck')",
-            timeout=2,
-        )
-
-        def read_summary() -> dict:
-            return cdp.evaluate(
-                """
-(() => {
-  const summary = document.querySelector('details.case-disclosure[open] > summary');
-  return {
-    stuck: summary.hasAttribute('data-stuck'),
-    shadow: getComputedStyle(summary).boxShadow,
-    height: Math.round(summary.getBoundingClientRect().height),
-    borderBottom: getComputedStyle(summary).borderBottomWidth,
-  };
-})()
-"""
-            )
-
-        at_rest = read_summary()
-        resting_scroll = cdp.evaluate("Math.round(window.scrollY)")
-        expect(
-            f"Sticky header: no edge at rest (scrollY {resting_scroll})",
-            at_rest_cleared and at_rest["stuck"] is False and at_rest["shadow"] == "none",
-        )
-        expect("Sticky header: no border of its own", at_rest["borderBottom"] == "0px")
-
-        # One explicit jump: scrollIntoView followed by scrollBy cancels the first smooth
-        # scroll under html{scroll-behavior:smooth}, and the row never reaches the header.
-        cdp.evaluate(
-            "(() => { const summary = document.querySelector('details.case-disclosure[open] > summary'); "
-            "const top = summary.getBoundingClientRect().top + window.scrollY + 400; "
-            "window.scrollTo({ top, behavior: 'instant' }); return true; })()"
-        )
-        pinned_ok = wait_for(
-            cdp,
-            "document.querySelector('details.case-disclosure[open] > summary').hasAttribute('data-stuck')",
-            timeout=2,
-        )
-        pinned_state = cdp.evaluate(
-            """
-(() => {
-  const summary = document.querySelector('details.case-disclosure[open] > summary');
-  if (!summary) return { missing: true };
-  const style = getComputedStyle(summary);
-  return {
-    top: Math.round(summary.getBoundingClientRect().top),
-    offset: style.top,
-    position: style.position,
-    stuck: summary.hasAttribute('data-stuck'),
-    shadow: style.boxShadow,
-    scrollY: Math.round(window.scrollY),
-    headerH: getComputedStyle(document.documentElement).getPropertyValue('--header-h').trim(),
-  };
-})()
-"""
-        )
-        expect(f"Sticky header: the edge appears once pinned ({json.dumps(pinned_state)})", pinned_ok)
-        pinned = read_summary()
-        expect("Sticky header: the pinned edge is painted", pinned["shadow"] != "none")
-        expect("Sticky header: the edge does not change the height", pinned["height"] == at_rest["height"])
-
-        cdp.evaluate("(() => { window.scrollTo({ top: 0, behavior: 'instant' }); return true; })()")
-        expect(
-            "Sticky header: the edge goes away when released",
-            wait_for(
-                cdp,
-                "!document.querySelector('details.case-disclosure[open] > summary').hasAttribute('data-stuck')",
-                timeout=2,
-            ),
-        )
-
-        after_close = cdp.evaluate(
-            """
-(async () => {
-  const details = document.querySelector('details.case-disclosure');
-  const summary = details.querySelector('summary');
-  summary.click();
-  window.scrollTo(0, summary.getBoundingClientRect().top + window.scrollY + 200);
-  await new Promise((done) => setTimeout(done, 300));
-  return {
-    marks: document.querySelectorAll('.case-disclosure > summary[data-stuck]').length,
-    closedTop: Math.round(summary.getBoundingClientRect().top),
-  };
-})()
-"""
-        )
-        expect(
-            f"Sticky header: no mark survives a closed row (header at {after_close['closedTop']}px)",
-            after_close["marks"] == 0,
-        )
 
         # The header bar keeps one midline: the wordmark, the nav links, and the toggle
         # all share a vertical center instead of hanging off the wordmark's baseline.
@@ -707,12 +593,12 @@ def main() -> int:
 """
         )
         expect(
-            f"Nav: three links, examples first "
+            f"Nav: three links, projects first "
             f"({json.dumps([item["label"] for item in nav_state])})",
-            [item["key"] for item in nav_state] == ["examples", "about", "contact"],
+            [item["key"] for item in nav_state] == ["projects", "about", "contact"],
         )
         expect(
-            "Nav: examples points at the home work section, about at the home about section",
+            "Nav: projects points at the home work section, about at the home about section",
             nav_state[0]["href"].endswith("#work") and nav_state[1]["href"].endswith("#about"),
         )
         expect(
@@ -721,10 +607,10 @@ def main() -> int:
         )
         cdp.evaluate("(() => { document.querySelector('#work').scrollIntoView({ block: 'start' }); return true; })()")
         expect(
-            "Nav: examples highlights at the home work section",
+            "Nav: projects highlights at the home work section",
             wait_for(
                 cdp,
-                "document.querySelector('.site-nav a[data-nav-key=\"examples\"]')?.hasAttribute('aria-current')",
+                "document.querySelector('.site-nav a[data-nav-key=\"projects\"]')?.hasAttribute('aria-current')",
                 timeout=2,
             ),
         )
@@ -822,6 +708,16 @@ def main() -> int:
             "Portrait: kept off the printed page",
             cdp.evaluate("getComputedStyle(document.querySelector('.story-portrait')).display") == "none",
         )
+        card_art = cdp.evaluate(
+            "(() => {"
+            " const art = document.querySelector('.card-art');"
+            " return { display: getComputedStyle(art).display, height: Math.round(art.getBoundingClientRect().height) };"
+            "})()"
+        )
+        expect(
+            f"Print: the card art stays on the page ({card_art['display']}, {card_art['height']}px)",
+            card_art["display"] != "none" and card_art["height"] > 0,
+        )
         media(cdp, "")
 
         # The committed CV PDF must still describe the page it claims to represent.
@@ -876,8 +772,8 @@ def main() -> int:
         return 1
 
     print(
-        f"Browser check OK: {ASSERTIONS} assertions over the no-JS fallback on both pages, print layout "
-        "and PDF text, theme toggle, icons, the sticky row and fact headers, and the header midline."
+        f"Browser check OK: {ASSERTIONS} assertions over the no-JS fallback on the cards, the index and the study pages, print layout "
+        "and PDF text, theme toggle, icons, the sticky fact headers, and the header midline."
     )
     return 0
 

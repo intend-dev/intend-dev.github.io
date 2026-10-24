@@ -1,0 +1,115 @@
+---
+// Card art: one hand-drawn SVG per featured study, diagramming the project's own
+// mechanism (no stock art, no licence to read). Inline SVG so it follows the theme.
+interface Props {
+  slug: string;
+}
+
+const { slug } = Astro.props;
+
+const labels: Record<string, string> = {
+  'code-review-orchestrator':
+    'Diagram: a pull request fans out to three reviewer agents and folds into one validated report',
+  'nasa-mission-rag':
+    'Diagram: documents are chunked into a grid, and every answer sentence ends with a citation marker',
+  'ai-budget-predicter':
+    'Diagram: two outcome curves of different heights sit against one threshold line',
+};
+const label = labels[slug] ?? 'Abstract diagram of the project';
+---
+
+<svg
+  class="card-art"
+  viewBox="0 0 400 250"
+  role="img"
+  aria-label={label}
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.5"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  {slug === 'code-review-orchestrator' && (
+    <>
+      <title>One pull request, three reviewers, one typed report</title>
+      {/* Pull request with its diff */}
+      <rect x="20" y="88" width="84" height="74" rx="8"></rect>
+      <path d="M32 106h48" class="thin"></path>
+      <path d="M32 122h44" class="accent"></path>
+      <path d="M32 138h32" stroke-dasharray="4 5"></path>
+      <path d="M32 154h52" class="accent"></path>
+      {/* The three specialist reviewers */}
+      <circle cx="200" cy="52" r="16"></circle>
+      <circle cx="200" cy="125" r="16"></circle>
+      <circle cx="200" cy="198" r="16"></circle>
+      {/* Fan out, fold back in */}
+      <path d="M104 125 184 52"></path>
+      <path d="M104 125h80"></path>
+      <path d="M104 125 184 198"></path>
+      <path d="M216 52 316 125"></path>
+      <path d="M216 125h100"></path>
+      <path d="M216 198 316 125"></path>
+      {/* The validated report */}
+      <rect x="316" y="88" width="64" height="74" rx="8"></rect>
+      <path d="M332 118l9 9 17-19" class="accent"></path>
+      <path d="M332 142h28" class="thin"></path>
+      <path d="M332 154h20" class="thin"></path>
+    </>
+  )}
+  {slug === 'nasa-mission-rag' && (
+    <>
+      <title>Chunked documents in, sentences with citations out</title>
+      {/* The corpus: a stack of documents */}
+      <rect x="36" y="64" width="72" height="48" rx="4"></rect>
+      <rect x="28" y="54" width="72" height="48" rx="4"></rect>
+      <rect x="20" y="44" width="72" height="48" rx="4"></rect>
+      <path d="M32 64h46" class="thin"></path>
+      <path d="M32 78h38" class="thin"></path>
+      {/* The chunk grid; four chunks lit as retrieved */}
+      <rect x="150" y="70" width="16" height="16" rx="2"></rect>
+      <rect x="170" y="70" width="16" height="16" rx="2"></rect>
+      <rect x="190" y="70" width="16" height="16" rx="2" class="hit"></rect>
+      <rect x="210" y="70" width="16" height="16" rx="2"></rect>
+      <rect x="150" y="90" width="16" height="16" rx="2" class="hit"></rect>
+      <rect x="170" y="90" width="16" height="16" rx="2"></rect>
+      <rect x="190" y="90" width="16" height="16" rx="2"></rect>
+      <rect x="210" y="90" width="16" height="16" rx="2"></rect>
+      <rect x="150" y="110" width="16" height="16" rx="2"></rect>
+      <rect x="170" y="110" width="16" height="16" rx="2"></rect>
+      <rect x="190" y="110" width="16" height="16" rx="2"></rect>
+      <rect x="210" y="110" width="16" height="16" rx="2" class="hit"></rect>
+      <path d="M238 110h40m-9-7 9 7-9 7"></path>
+      {/* The answer: every sentence ends in a citation marker */}
+      <path d="M292 78h60" class="thin"></path>
+      <circle cx="362" cy="72" r="5" class="dot"></circle>
+      <path d="M292 112h60" class="thin"></path>
+      <circle cx="362" cy="106" r="5" class="dot"></circle>
+      <path d="M292 146h60" class="thin"></path>
+      <circle cx="362" cy="140" r="5" class="dot"></circle>
+    </>
+  )}
+  {slug === 'ai-budget-predicter' && (
+    <>
+      <title>Two outcome curves of different heights against one threshold</title>
+      {/* Baseline and the two groups' outcome curves */}
+      <path d="M36 196h328" class="thin"></path>
+      <path d="M56 196c60 0 70-132 100-132s40 132 100 132"></path>
+      <path d="M156 196c60 0 70-80 100-80s40 80 100 80" class="dash"></path>
+      <circle cx="156" cy="64" r="4" class="dot"></circle>
+      <circle cx="256" cy="116" r="4" class="dot"></circle>
+      {/* The threshold the audit holds the model to */}
+      <path d="M256 36v160" class="accent" stroke-dasharray="5 7"></path>
+    </>
+  )}
+  {!(slug in labels) && (
+    <>
+      <title>Project diagram</title>
+      <rect x="28" y="70" width="88" height="110" rx="8"></rect>
+      <path d="M136 125h92m-11-8 11 8-11 8"></path>
+      <rect x="244" y="70" width="128" height="110" rx="8"></rect>
+      <path d="M264 104h88" class="thin"></path>
+      <path d="M264 125h64" class="thin"></path>
+      <path d="M264 146h76" class="thin"></path>
+    </>
+  )}
+</svg>

@@ -108,8 +108,8 @@ for (const [route, file] of htmlByRoute) {
   }
 }
 
-// The six published slugs are deliberate: a seventh project also needs its redirect
-// output, and that decision should be explicit rather than inferred.
+// The six published slugs are deliberate: a seventh project also needs its own study
+// page, and that decision should be explicit rather than inferred.
 const required = [
   'index.html',
   'work/index.html',
@@ -130,7 +130,9 @@ for (const file of required) {
   if (!existsSync(join(dist, file))) errors.push(`missing required output dist/${file}`);
 }
 
-const stubRoutes = [...htmlByRoute.keys()].filter((route) => /^(?:about\/index\.html|work\/[^/]+\/index\.html)$/.test(route));
+// The alias routes are noindex redirects; every other route, the six study pages included,
+// is a real page and must not carry a meta refresh.
+const stubRoutes = [...htmlByRoute.keys()].filter((route) => /^about\/index\.html$/.test(route));
 for (const stub of stubRoutes) {
   const html = readFileSync(join(dist, stub), 'utf8');
   if (!/http-equiv="refresh"/i.test(html)) errors.push(`${stub}: missing meta refresh fallback`);
