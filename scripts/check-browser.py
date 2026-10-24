@@ -507,14 +507,14 @@ def main() -> int:
         # lives on the work page.
         goto(cdp, f"{origin}work/")
         expect(
-            "Breadcrumb: hidden at rest on the work page (the nav Work link is highlighted)",
+            "Breadcrumb: hidden at rest on the work page (nothing is highlighted either)",
             cdp.evaluate("document.querySelector('.nav-current').hidden") is True,
         )
         expect(
-            "Nav: work highlighted on the work page",
+            "Nav: nothing highlighted on the work page (the work link is not in the menu)",
             wait_for(
                 cdp,
-                "document.querySelector('.site-nav a[data-nav-key=\"work\"]')?.hasAttribute('aria-current')",
+                "document.querySelectorAll('.site-nav a[aria-current]').length === 0",
                 timeout=2,
             ),
         )
@@ -557,12 +557,12 @@ def main() -> int:
 """
         )
         expect(
-            f"Breadcrumb: the sub-level only, without repeating Work ({crumb['text']!r})",
+            f"Breadcrumb: the sub-level only ({crumb['text']!r})",
             crumb["text"] == crumb["current"] and crumb["hidden"] is False,
         )
         expect(
-            f"Nav: work stays highlighted inside a work study ({crumb['nav']})",
-            crumb["nav"] == ["work"],
+            f"Nav: no link highlights inside a study (the work link is out of the menu) ({crumb['nav']})",
+            crumb["nav"] == [],
         )
 
         # Print: the case study flow and the row header keep their behaviour.
@@ -707,13 +707,17 @@ def main() -> int:
 """
         )
         expect(
-            f"Nav: four links, examples first "
+            f"Nav: three links, examples first "
             f"({json.dumps([item["label"] for item in nav_state])})",
-            [item["key"] for item in nav_state] == ["examples", "work", "about", "contact"],
+            [item["key"] for item in nav_state] == ["examples", "about", "contact"],
         )
         expect(
-            "Nav: examples points at the home work section",
-            nav_state[0]["href"].endswith("#work") and nav_state[1]["href"].endswith("/work"),
+            "Nav: examples points at the home work section, about at the home about section",
+            nav_state[0]["href"].endswith("#work") and nav_state[1]["href"].endswith("#about"),
+        )
+        expect(
+            "Nav: the work item stays out of the menu (commented by decision)",
+            cdp.evaluate("document.querySelectorAll('.site-nav a[data-nav-key=\"work\"]').length") == 0,
         )
         cdp.evaluate("(() => { document.querySelector('#work').scrollIntoView({ block: 'start' }); return true; })()")
         expect(
@@ -723,10 +727,6 @@ def main() -> int:
                 "document.querySelector('.site-nav a[data-nav-key=\"examples\"]')?.hasAttribute('aria-current')",
                 timeout=2,
             ),
-        )
-        expect(
-            "Nav: work stays quiet on the home work section",
-            cdp.evaluate("document.querySelector('.site-nav a[data-nav-key=\"work\"]')?.hasAttribute('aria-current')") is False,
         )
         midline = cdp.evaluate(
             """

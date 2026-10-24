@@ -12,10 +12,13 @@ import copy from '../data/copy.json';
     <div class="header-actions">
       <div class="header-work">
         <nav class="site-nav" aria-label="Primary">
-          <!-- data-nav-key names the section each link tracks; the examples and work
-               links target different surfaces (the home sampler and the full work page). -->
+          <!-- data-nav-key names the section each link tracks; the examples link opens
+               the home sampler. -->
           <a data-nav-key="examples" href={withBase('/#work')}>{copy.nav.examples}</a>
-          <a data-nav-key="work" href={withBase('/work')}>{copy.nav.work}</a>
+          <!-- Work: commented by the owner on `2026-10-23`: too much technical data in
+               the menu for now; the all-six page stays live on /work (the CV PDF links
+               it) and the restore is this comment mark. -->
+          <!-- <a data-nav-key="work" href={withBase('/work')}>{copy.nav.work}</a> -->
           <a data-nav-key="about" href={withBase('/#about')}>{copy.sections.about}</a>
           <a data-nav-key="contact" href={withBase('/#contact')}>{copy.sections.contact}</a>
         </nav>
