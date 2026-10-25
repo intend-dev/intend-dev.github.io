@@ -4,11 +4,15 @@
 // carries, so the reveal script can run the self-draw animation without
 // measuring geometry; without JavaScript or with reduced motion the finished diagram
 // is simply all there is.
+import { frameOf } from '../lib/art-frames';
+
 interface Props {
   slug: string;
 }
 
 const { slug } = Astro.props;
+
+const [fx, fy, fw, fh] = frameOf(slug);
 
 const labels: Record<string, string> = {
   'code-review-orchestrator':
@@ -29,7 +33,7 @@ const label = labels[slug] ?? 'Abstract diagram of the project';
 
 <svg
   class="card-art"
-  viewBox="0 0 400 250"
+  viewBox={`${fx} ${fy} ${fw} ${fh}`}
   role="img"
   aria-label={label}
   fill="none"

@@ -5,7 +5,7 @@
     "caseStudies": "Case studies"
   },
   "work": {
-    "heading": "All case studies",
+    "heading": "Case studies",
     "note": "Architecture, evaluation evidence, what broke and how it was fixed",
     "disclosure": "The AI projects are private coursework repositories. Each write-up documents the architecture, the evidence, and the failure that changed the build. I can walk through the implementation in an interview."
   },
@@ -28,11 +28,10 @@
     "paragraphs": [
       "I was introduced to programming in 2012, while studying Automation and Robotics and learning to program microprocessors. I was drawn to the idea of making machines work, but my curiosity was never limited to engineering. Art, photography, science, marketing, and psychology have all held my attention at different points in my life.",
       "I've studied and explored many different fields, not to collect qualifications, but to understand how things work. Curiosity rarely respects disciplinary boundaries, and I've come to see that as an advantage: the more perspectives you develop, the more connections you begin to recognise.",
-      "The robots nearly got me.",
-      "I chose Automation and Robotics because I wanted to build and repair robots. Instead, I found myself maintaining existing machinery, keeping systems running rather than creating new ones. It wasn't the work I'd imagined, so I changed direction. Software became the place where I could keep solving problems, building things, and understanding the systems behind them.",
+      "Back then I chose Automation and Robotics because I wanted to build and repair robots. Instead, I found myself maintaining existing machinery, keeping systems running rather than creating new ones. It wasn't the work I'd imagined, so I changed direction, and so Software became the place where I could keep solving problems, building things, and understanding the systems behind them.",
       "That experience left me with two habits I still rely on: patience when things break, and a tendency to look closer at what others might overlook.",
-      "Today, I work with Stibo STEP and master data management at Bosch while pursuing a master's degree in Artificial Intelligence. Outside work, I continue exploring psychology, philosophy, art, and science fiction, as well as how machines perceive and interpret the world.",
-      "These interests aren't separate from the way I think about technology. They often give me different ways to approach the same problem. Whether I'm working with data, debugging a system, or learning something entirely new, I start with the same principle:",
+      "Today, I work with Stibo STEP and master data management at Bosch while pursuing a master's degree in Artificial Intelligence. Outside work, I still continue exploring other interests that pick my curiosity.",
+      "To me these interests aren't separate from the way I think about technology. They often give me different ways to approach the same problem. Whether I'm working with data, debugging a system, or learning something entirely new, I start with the same principle:",
       "Observe the system first. Then act."
     ]
   },

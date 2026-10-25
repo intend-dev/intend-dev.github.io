@@ -199,7 +199,7 @@ def settle_ready(cdp: CDP, javascript: bool) -> bool:
     if re.search(r"^/work/[^/]+", path):
         return wait_for(cdp, "document.querySelectorAll('.case-flow li').length >= 3")
     if path.rstrip("/").endswith("/work"):
-        return wait_for(cdp, "document.querySelectorAll('.project-row').length === 6")
+        return wait_for(cdp, "document.querySelectorAll('.project-card').length === 6")
     return wait_for(cdp, "document.querySelectorAll('.project-card').length === 3")
 
 
@@ -386,10 +386,10 @@ def main() -> int:
         # All six studies stay reachable from the work page index without JavaScript.
         cdp.call("Page.navigate", {"url": f"{origin}work/"})
         wait_for(cdp, "document.readyState === 'complete'")
-        row_links = cdp.evaluate("[...document.querySelectorAll('.project-row .row-link')].map((a) => a.pathname)")
+        row_links = cdp.evaluate("[...document.querySelectorAll('.project-card .card-link')].map((a) => a.pathname)")
         expect(
             "No-JS: the work page lists all six studies",
-            cdp.evaluate("document.querySelectorAll('.project-row').length") == 6,
+            cdp.evaluate("document.querySelectorAll('.project-card').length") == 6,
         )
         expect(
             f"No-JS: each work row links to a distinct study page ({len(row_links)} links)",
@@ -650,11 +650,11 @@ def main() -> int:
         )
         row = cdp.evaluate(
             "(() => {"
-            " const row = document.querySelector('.project-row .row-link');"
-            " return { title: row.querySelector('.project-title').textContent.trim(), href: row.pathname };"
+            " const row = document.querySelector('.project-card .card-link');"
+            " return { title: row.querySelector('.card-title').textContent.trim(), href: row.pathname };"
             "})()"
         )
-        cdp.evaluate("document.querySelector('.project-row .row-link').click()")
+        cdp.evaluate("document.querySelector('.project-card .card-link').click()")
         # Not settle_ready: during a View-Transition swap the pathname still reads the
         # index for a moment, which would settle instantly on the index's own six rows
         # and probe mid-swap. The index never carries the study's flow; waiting for it
@@ -749,8 +749,17 @@ def main() -> int:
   const h1 = document.querySelector('h1');
   const lh = parseFloat(getComputedStyle(h1).lineHeight);
   const wrap = document.querySelector('.study .wrap').getBoundingClientRect();
-  const art = document.querySelector('.study-art').getBoundingClientRect();
-  return { lines: Math.round(h1.getBoundingClientRect().height / lh), artW: Math.round(art.width), wrapW: Math.round(wrap.width) };
+  const hero = document.querySelector('.study-hero')?.getBoundingClientRect();
+  const art = document.querySelector('.study-art')?.getBoundingClientRect();
+  const rail = document.querySelector('.study-hero .case-metrics')?.getBoundingClientRect();
+  return {
+    lines: Math.round(h1.getBoundingClientRect().height / lh),
+    heroW: hero ? Math.round(hero.width) : -1,
+    wrapW: Math.round(wrap.width),
+    artW: art ? Math.round(art.width) : -1,
+    railLeft: rail ? Math.round(rail.left) : -1,
+    artRight: art ? Math.round(art.right) : -1,
+  };
 })()
 """
         )
@@ -759,8 +768,12 @@ def main() -> int:
             nowrap_study["lines"] == 1,
         )
         expect(
-            f"Study page: the exhibit spans the section width ({nowrap_study['artW']} of {nowrap_study['wrapW']})",
-            nowrap_study["artW"] == nowrap_study["wrapW"],
+            f"Study page: the hero row spans the section width ({nowrap_study['heroW']} of {nowrap_study['wrapW']})",
+            nowrap_study["heroW"] == nowrap_study["wrapW"],
+        )
+        expect(
+            f"Study page: the metric rail clears the exhibit (art right {nowrap_study['artRight']} vs rail left {nowrap_study['railLeft']})",
+            nowrap_study["railLeft"] >= nowrap_study["artRight"],
         )
         last = cdp.evaluate(
             """
@@ -1028,22 +1041,41 @@ def main() -> int:
 
         # The contact section ends the page: the space from its content to the footer
         # rule must match the space from the rule above it, so the block does not hug
-        # its top border over a doubled void. (The last-section bottom spacing is the
-        # section's own padding; the footer carries no top margin.)
+        # its top border over a doubled void. The content bottom is the two-zone grid
+        # (the centered links row rides mid-band by design, so the grid is the block
+        # whose bottom must not dangle over a second void).
         balance = cdp.evaluate(
             """
 (() => {
   const section = document.querySelector('#contact').getBoundingClientRect();
   const head = document.querySelector('#contact .section-head').getBoundingClientRect();
+  const grid = document.querySelector('#contact .contact-grid').getBoundingClientRect();
+  const wrap = document.querySelector('#contact .wrap').getBoundingClientRect();
   const links = document.querySelector('#contact .contact-links').getBoundingClientRect();
   const footer = document.querySelector('.site-footer').getBoundingClientRect();
-  return { above: Math.round(head.top - section.top), below: Math.round(footer.top - links.bottom) };
+  const kids = [...document.querySelectorAll('#contact .contact-links > *')].map((el) => el.getBoundingClientRect());
+  kids.sort((a, b) => a.top - b.top || a.bottom - b.bottom);
+  const bands = [];
+  for (const k of kids) {
+    const last = bands[bands.length - 1];
+    if (!last || k.top - last[1] > 6) bands.push([k.top, k.bottom]);
+    else last[1] = Math.max(last[1], k.bottom);
+  }
+  return {
+    above: Math.round(head.top - section.top),
+    below: Math.round(footer.top - grid.bottom),
+    oneRow: bands.length === 1,
+  };
 })()
 """
         )
         expect(
             f"Contact: one separation, not two (above {balance['above']}px, below {balance['below']}px)",
             balance["below"] <= balance["above"] + 8,
+        )
+        expect(
+            f"Contact: the details sit as one row (oneRow {balance['oneRow']})",
+            balance["oneRow"],
         )
 
         # The hero is not a .section, so the work seam needs naming (the About section used

@@ -30,15 +30,27 @@ const work = stripHtml(workHtml);
 const cv = readPage('cv/index.html');
 
 // The profile shows its featured studies as cards; the work page is the index of six.
-// Counting them is the outcome: a fourth card on the profile, or a missing row on the
-// index, is a defect a visitor sees.
+// Counting them is the outcome: a fourth card on the profile, or a missing card on
+// the index, is a defect a visitor sees.
 const cardCount = (html) => (html.match(/class="project-card"/g) ?? []).length;
-const rowCount = (html) => (html.match(/class="project-row"/g) ?? []).length;
 if (cardCount(homeHtml) !== 3) {
   problems.push(`the profile shows ${cardCount(homeHtml)} study cards, expected 3`);
 }
-if (rowCount(workHtml) !== 6) {
-  problems.push(`the work page shows ${rowCount(workHtml)} study rows, expected all 6`);
+if (cardCount(workHtml) !== 6) {
+  problems.push(`the work page shows ${cardCount(workHtml)} study cards, expected all 6`);
+}
+
+// Study #8 can ship before its diagram is drawn: CardArt is bespoke per slug, and an
+// unmapped slug renders an empty svg. Count the drawing shapes inside each study's
+// exhibit so a missing diagram fails the gate instead of landing as a blank frame.
+for (const entry of readdirSync(join(dist, 'work'), { withFileTypes: true })) {
+  if (!entry.isDirectory()) continue;
+  const studyHtml = readRaw(join('work', entry.name, 'index.html'));
+  const art = studyHtml.match(/<svg[^>]*class="card-art"[^>]*>([\s\S]*?)<\/svg>/);
+  const shapes = art ? (art[1].match(/<(?:path|rect|circle)\b/g) ?? []).length : 0;
+  if (shapes === 0) {
+    problems.push(`the ${entry.name} study ships an empty exhibit (no drawing shapes)`);
+  }
 }
 
 // ---------------------------------------------------------------------------

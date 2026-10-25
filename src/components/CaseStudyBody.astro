@@ -1,8 +1,6 @@
 ---
 import type { CollectionEntry } from 'astro:content';
 import Flow from './Flow.astro';
-import MetricGrid from './MetricGrid.astro';
-import TagList from './TagList.astro';
 
 interface Props {
   project: CollectionEntry<'projects'>;
@@ -14,10 +12,6 @@ const { project, html } = Astro.props;
 
 <div class="case-flow">
   <Flow steps={project.data.flow} />
-</div>
-
-<div class="case-metrics">
-  <MetricGrid metrics={project.data.metrics} />
 </div>
 
 <div class="prose" set:html={html} />

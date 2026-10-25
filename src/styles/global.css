@@ -546,74 +546,6 @@ svg {
   overflow-wrap: anywhere;
 }
 
-/* Project rows (the work page's index) */
-
-.project-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  border-top: var(--line);
-}
-
-.project-row {
-  border-bottom: var(--line);
-}
-
-.project-row .row-link {
-  display: block;
-  text-decoration: none;
-  color: inherit;
-}
-
-.project-row .row-inner {
-  display: grid;
-  grid-template-columns: 3.5rem minmax(0, 1fr) auto;
-  gap: 0.35rem 1.25rem;
-  padding-block: clamp(1.25rem, 3vw, 1.75rem);
-  align-items: baseline;
-}
-
-.project-row .order {
-  font-family: var(--mono);
-  font-size: var(--step--1);
-  color: var(--muted);
-}
-
-.project-row .project-title {
-  font-size: var(--step-2);
-  margin: 0;
-}
-
-.project-row .summary {
-  grid-column: 2;
-  color: var(--muted);
-  font-size: var(--step-0);
-  margin-top: 0.35rem;
-}
-
-.project-row .row-tags {
-  grid-column: 2;
-}
-
-.project-row .arrow {
-  grid-column: 3;
-  grid-row: 1;
-  font-family: var(--mono);
-  color: var(--muted);
-  transition: transform var(--transition), color var(--transition);
-}
-
-.project-row:hover .project-title,
-.project-row:focus-within .project-title {
-  color: var(--accent);
-}
-
-.project-row:hover .arrow,
-.project-row:focus-within .arrow {
-  color: var(--accent);
-  transform: translateX(0.25rem);
-}
-
 /* The cards list: no bullets or default indent, one column - the card-link carries
    the desktop art/text columns. The frame gives the artwork the same surface the
    study page's exhibit uses, so the same diagram reads the same in both places. */
@@ -901,9 +833,17 @@ svg {
   font-size: var(--step--1);
   color: var(--muted);
   margin-top: 0.1rem;
+  /* A wrapped note reads as two deliberate lines instead of a crooked one. */
+  text-wrap: balance;
 }
 
 @media (min-width: 900px) {
+  /* Flush pipeline: markers on the container's left edge, the shared rule runs from the
+     page edge to the last marker, and copy stays left-anchored under each marker - the
+     same alignment line the metrics, capabilities and prose use (the owner's call over
+     my centered stepper, which broke the page's one shared left line). The extra column
+     padding keeps a long note from running into the next marker: the 16px near-touch
+     becomes at least 28px clear, or the note wraps into two balanced lines in place. */
   .flow {
     grid-auto-flow: column;
     grid-auto-columns: minmax(0, 1fr);
@@ -913,7 +853,7 @@ svg {
     border-left: none;
     border-top: var(--line);
     margin-left: 0;
-    padding: 1.5rem 1rem 0 0;
+    padding: 1.5rem 1.75rem 0 0;
   }
 
   .flow li::before {
@@ -921,8 +861,8 @@ svg {
     top: -0.7rem;
   }
 
-  /* The connector ends at the last marker. Its column still spans to the container edge,
-     so painting its border would leave a stray rule hanging past step 05. */
+  /* The rule ends at the last marker: its column reaches the container edge, so a border
+     there would hang a stray rule past the last step. */
   .flow li:last-child {
     border-top: none;
   }
@@ -1015,14 +955,32 @@ svg {
 /* The chips are a plain wrapped list: no track, no controls, no horizontal scrollbar.
    Eight names wrap to two rows on a laptop. */
 
-/* Contact */
+/* Contact: the heading and the details live side by side from the row breakpoint (the
+   footer's zone grammar): the details as ONE row flush right, vertically centered
+   against the heading block. Below the breakpoint they stack: heading, then the row
+   of details, which wraps to two chip rows on phones (the email line is wider than
+   a 390 column and must not be truncated). */
+.contact-grid {
+  display: grid;
+  gap: 1rem 3rem;
+}
+
+@media (min-width: 900px) {
+  .contact-grid {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .contact-links {
+    flex-wrap: nowrap;
+  }
+}
 
 .contact-links {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem 1.5rem;
   align-items: center;
-  margin-top: 1.5rem;
   font-family: var(--mono);
   font-size: var(--step--1);
   overflow-wrap: anywhere;
@@ -1066,8 +1024,27 @@ svg {
   margin-block: clamp(2rem, 5vw, 3.5rem);
 }
 
-.case-metrics {
-  margin-block: clamp(2rem, 5vw, 3rem);
+/* The hero row: the framed diagram beside its metrics rail - the project card's
+   grammar at the study's full width, so the diagram's flank is put to work instead of
+   being empty air, and the metrics sit beside what they quantify. Below the rail
+   breakpoint they stack: art, metrics, then the flow and the prose. */
+.study-hero {
+  display: grid;
+  gap: 1.5rem 2.5rem;
+  margin-top: 2rem;
+}
+
+@media (min-width: 1000px) {
+  .study-hero {
+    grid-template-columns: minmax(0, 1fr) clamp(13rem, 16vw, 15rem);
+    align-items: center;
+  }
+
+  /* The rail is too narrow for a row of metrics: they stack, value over label. */
+  .study-hero .metric-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+  }
 }
 
 /* The study body keeps the full section width: the text column is the page, so
@@ -1081,7 +1058,13 @@ svg {
    instead of a billboard. */
 
 .study-art {
+  /* The mat: always the full column width (flush with every other component), and
+     from the rail breakpoint a constant band height, so the white around a diagram
+     is the same mounted frame on every study instead of a different box each time.
+     The svg inside resolves to the biggest aspect-exact rect under both maxes
+     (browser replaced-element sizing), centered like a print in a mat. */
   margin-top: 2rem;
+  width: 100%;
   padding: clamp(1rem, 3vw, 2rem);
   border: var(--line);
   border-radius: 0.75rem;
@@ -1089,12 +1072,29 @@ svg {
 }
 
 .study-art .card-art {
+  /* auto on both axes: the replaced-element sizing resolves the viewbox's aspect
+     against max-width and max-height, so the drawing is always the biggest box that
+     fits the mat with no letterboxing. */
   display: block;
   margin-inline: auto;
-  max-height: 360px;
-  max-width: 100%;
   width: auto;
   height: auto;
+  max-width: 100%;
+  max-height: min(60vh, 30rem);
+}
+
+@media (min-width: 1000px) {
+  .study-art {
+    height: min(60vh, 30rem);
+  }
+
+  /* Inside the definite band the svg resolves against the band's content height -
+     this override must sit after the base rule above, or the cascade would keep the
+     60vh max and tall diagrams would overflow the mat's bottom edge (the sliced
+     retrieval bar). */
+  .study-art .card-art {
+    max-height: 100%;
+  }
 }
 
 /* Ending navigation: previous on the left, next on the right; the two ends return to
