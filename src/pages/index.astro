@@ -6,6 +6,7 @@ import SectionHeading from '../components/SectionHeading.astro';
 import ProjectCard from '../components/ProjectCard.astro';
 import ContactLinks from '../components/ContactLinks.astro';
 import Fact from '../components/Fact.astro';
+import HeroArt from '../components/HeroArt.astro';
 import portrait from '../assets/francisco-mateus.png';
 import { profile } from '../data/profile';
 import { certifications, education, experience, skillGroups } from '../data/career';
@@ -72,6 +73,7 @@ const capabilities = [
   jsonLd={jsonLd}
 >
   <section class="hero" id="overview">
+    <HeroArt />
     <div class="wrap">
       <p class="eyebrow">APPLICATION SPECIALIST · AI AND MASTER DATA</p>
       <h1>{profile.headline}</h1>

@@ -32,24 +32,28 @@ import copy from '../data/copy.json';
 
 <script is:inline>
   (() => {
-    const header = document.querySelector('.site-header');
-    if (!header) return;
+    // A client-side swap replaces the header element, so every callback re-resolves the
+    // live element from the DOM instead of trusting this script run's captured reference.
+    const getHeader = () => document.querySelector('.site-header');
 
     const sync = () => {
+      const header = getHeader();
+      if (!header) return;
+
       const height = Math.round(header.getBoundingClientRect().height);
       if (height > 0) document.documentElement.style.setProperty('--header-h', `${height}px`);
+
+      // The observer follows the live element across swaps; the once-created instance
+      // stays the single one and disconnect is free for a freshly connected element.
+      if ('ResizeObserver' in window) {
+        if (!window.__fmHeaderRO) window.__fmHeaderRO = new ResizeObserver(sync);
+        window.__fmHeaderRO.disconnect();
+        window.__fmHeaderRO.observe(header);
+      }
     };
 
     sync();
     if (document.fonts) document.fonts.ready.then(sync);
-
-    // The header persists across View Transitions, so this script runs once per full
-    // load and re-resolves per page swap; the guards keep the listeners single even
-    // if the browser ever re-runs the script.
-    if (!window.__fmHeaderRO && 'ResizeObserver' in window) {
-      window.__fmHeaderRO = true;
-      new ResizeObserver(sync).observe(header);
-    }
 
     let scrolledObserver = null;
     let sections = [];
@@ -57,11 +61,17 @@ import copy from '../data/copy.json';
     let atEnd = false;
 
     let pending = false;
+    // Option A: the bar is bare at the top and elevates once 40px of content has gone
+    // under it; the attribute drives the CSS treatment.
+    const elevate = () => {
+      getHeader()?.toggleAttribute('data-scrolled', window.scrollY > 40);
+    };
     const schedule = () => {
       if (pending) return;
       pending = true;
       requestAnimationFrame(() => {
         pending = false;
+        elevate();
         update();
       });
     };
@@ -108,6 +118,8 @@ import copy from '../data/copy.json';
 
     const update = () => {
       if (sections.length === 0) return;
+      const header = getHeader();
+      if (!header) return;
       const height = header.getBoundingClientRect().height;
       const horizon = window.scrollY + height + 24;
       let current = sections[0];
@@ -150,10 +162,15 @@ import copy from '../data/copy.json';
       window.addEventListener('resize', schedule);
       document.addEventListener('astro:page-load', () => {
         sync();
+        elevate();
         trackSections();
       });
-      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', trackSections);
-      else trackSections();
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => { elevate(); trackSections(); });
+      } else {
+        elevate();
+        trackSections();
+      }
     }
   })();
 </script>

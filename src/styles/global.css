@@ -224,16 +224,22 @@ svg {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: var(--bg);
-  border-bottom: var(--line);
-  transition: background-color var(--transition), border-bottom-color var(--transition);
+  /* At the very top the bar is bare (the hero reads straight through it); once content
+     scrolls under the pinned bar it elevates through the attribute treatment below. */
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  transition: background-color var(--transition), border-bottom-color var(--transition), backdrop-filter var(--transition);
 }
 
-/* Set by Header.astro once content scrolls under the pinned header */
+/* Set by Header.astro once content scrolls under the pinned header. The bar's height
+   stays constant: only colour, blur, and the hairline respond. A moving bar height
+   would shift every scroll anchor and the pinned fact headers mid-flight. */
 
 .site-header[data-scrolled] {
-  background: var(--surface);
-  border-bottom-color: var(--accent);
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  -webkit-backdrop-filter: blur(8px) saturate(1.15);
+  backdrop-filter: blur(8px) saturate(1.15);
+  border-bottom-color: var(--rule);
 }
 
 /* Two probes that the header script reads: one above the header, one at the end of the
@@ -528,6 +534,153 @@ svg {
   flex: none;
 }
 
+/* The hero staggers in once on load: the five blocks fade through in sequence. The
+   media guard makes the no-motion fallback (and any missing animation support) the
+   fully visible page, so nothing above the fold is ever hidden. */
+
+@media (prefers-reduced-motion: no-preference) {
+  .hero .wrap > * {
+    animation: hero-fade 0.45s ease-out both;
+  }
+  .hero .wrap > :nth-child(2) { animation-delay: 70ms; }
+  .hero .wrap > :nth-child(3) { animation-delay: 140ms; }
+  .hero .wrap > :nth-child(4) { animation-delay: 210ms; }
+  .hero .wrap > :nth-child(5) { animation-delay: 280ms; }
+}
+
+@keyframes hero-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* The neural field as the hero's background layer: the whole hero box as wallpaper,
+   behind every word (z-index -1 inside the hero's own stacking context), whisper
+   strokes in the study diagrams' grammar. A mask dissolves the layer at the hero's
+   edges so the slice-cover crop lands in invisible territory. The default (no-motion)
+   markup is the fully drawn field. On scroll it drifts slower than the page and fades
+   into the seam - CSS scroll timelines where the engine has them; without them the
+   layer just leaves with the hero, unmoved. */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-art {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  user-select: none;
+  -webkit-mask-image: radial-gradient(135% 115% at 58% 42%, black 52%, transparent 100%);
+  mask-image: radial-gradient(135% 115% at 58% 42%, black 52%, transparent 100%);
+}
+
+@media (max-width: 899.98px) {
+  .hero-art {
+    display: none;
+  }
+}
+
+.hero-art .hero-draw,
+.hero-art .hero-wave line {
+  stroke: var(--muted);
+  stroke-opacity: 0.16;
+  stroke-width: 1px;
+  fill: none;
+}
+
+.hero-art .hero-wave--dashed line {
+  stroke-opacity: 0.12;
+  stroke-dasharray: 2 3.5;
+}
+
+.hero-art .hero-node {
+  stroke: var(--muted);
+  stroke-opacity: 0.32;
+  fill: var(--bg);
+}
+
+.hero-art .hero-node--accent {
+  stroke: var(--accent);
+  stroke-opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hero-art .hero-draw {
+    /* pathLength="1" normalises every stroke, so one keyframe fits all lengths. */
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: hero-art-draw 0.38s ease-out forwards;
+  }
+
+  .hero-wave:nth-of-type(2) .hero-draw { animation-delay: 0.16s; }
+  .hero-wave:nth-of-type(3) .hero-draw { animation-delay: 0.32s; }
+  .hero-wave:nth-of-type(4) .hero-draw { animation-delay: 0.48s; }
+
+  .hero-art .hero-wave--dashed line {
+    opacity: 0;
+    animation: hero-art-node 0.5s ease-out 1s forwards;
+  }
+
+  .hero-art .hero-node {
+    animation: hero-art-node 0.35s ease-out 0.8s both;
+  }
+
+  .hero-art .hero-node--pulse {
+    animation: hero-art-node 0.35s ease-out 0.8s both, hero-art-pulse 5s ease-in-out 1.5s infinite;
+  }
+
+  .hero-art {
+    animation: hero-art-drift linear both, hero-art-out linear both;
+    animation-timeline: view(), view();
+    animation-range: cover 0% cover 100%, exit 0% exit 96%;
+  }
+}
+
+@keyframes hero-art-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes hero-art-node {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes hero-art-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+/* The parallax drift: the layer travels slower than the page while you scroll; the
+   fade runs on the exit range only, so the layer is fully visible at the fold. */
+@keyframes hero-art-drift {
+  from {
+    transform: translateY(-2rem);
+  }
+  to {
+    transform: translateY(5rem);
+  }
+}
+
+@keyframes hero-art-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes hero-art-out {
+  to { opacity: 0; }
+}
+
+@media (print) {
+  .hero-art {
+    display: none;
+  }
+}
+
 /* Section heading */
 
 /* The note sits under its heading as a deck. Sharing a line with the heading made the
@@ -782,13 +935,16 @@ svg {
 
 /* Flow */
 
+/* Phone: the step rail is a narrow stacked column; center it as a strip instead of
+   pinning it to the left edge. The pipeline below restores the full-width strip. */
 .flow {
   list-style: none;
-  margin: 0;
+  margin: 0 auto;
   padding: 0;
   display: grid;
   gap: 0;
   counter-reset: flow;
+  width: fit-content;
 }
 
 .flow li {
@@ -847,6 +1003,8 @@ svg {
   .flow {
     grid-auto-flow: column;
     grid-auto-columns: minmax(0, 1fr);
+    width: auto;
+    margin: 0;
   }
 
   .flow li {
@@ -1100,13 +1258,23 @@ svg {
 /* Ending navigation: previous on the left, next on the right; the two ends return to
    the portfolio home, so no study dead-ends. Titles carry the links. */
 
+/* The buttons breathe equally above and below (the study section's own bottom padding
+   retires to pay for it), so they center between this rule and the footer's. */
+.study {
+  padding-bottom: 0;
+}
+
 .study-nav {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 1rem;
-  margin-top: 3rem;
-  padding-top: 1.5rem;
+  /* 3rem became 1.5rem when the meta rows centered: the nav's top rule keeps its place. */
+  margin-top: 1.5rem;
+  padding-block: 3.75rem;
   border-top: var(--line);
+  /* A short cell (the single-line home link) centers against the taller cell, instead of
+     hanging from its kicker line. No effect when the cells stack. */
+  align-items: center;
 }
 
 .study-nav-link {
@@ -1253,25 +1421,26 @@ svg {
 
 .study-meta {
   margin-top: 1.75rem;
-  padding-block: 1rem;
+  /* Rows sit optically centered between this hairline and the study-nav's: the extra
+     top padding is the complement cut from the nav's margin, so both rules stay put. */
+  padding-block: 2.5rem 1rem;
   border-top: var(--line);
   font-size: var(--step--1);
 }
 
 .study-meta dl {
   margin: 0;
-  display: flex;
-  flex-wrap: wrap;
-  column-gap: 2rem;
-  row-gap: 0.5rem;
+  /* The pair divs step aside (display: contents) so every dt lands in the label column
+     and every value starts on one shared edge: the meta reads as a table, not a jumble. */
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 1.25rem;
+  row-gap: 0.6rem;
   align-items: baseline;
 }
 
 .study-meta dl > div {
-  display: flex;
-  flex-wrap: wrap;
-  column-gap: 0.4rem;
-  align-items: baseline;
+  display: contents;
 }
 
 .study-meta dt {
@@ -1288,12 +1457,6 @@ svg {
 
 .study-meta .tags {
   margin: 0;
-}
-
-.study-meta .private-note {
-  margin: 0;
-  font-size: var(--step--2);
-  color: var(--muted);
 }
 
 /* Disclosures */

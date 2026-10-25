@@ -1,0 +1,99 @@
+---
+// The hero's background layer: a sparse hand-drawn neural field covering the whole
+// hero box behind the type, painted behind every word. Decorative only: aria-hidden,
+// no ids, no relation to any study diagram (the browser check's three `data-draw`
+// exhibits stay three). Sized for the hero's ~2:1 box; the mask and slice-cover
+// dissolve the edges, so nothing reads as a cropped picture.
+const wave1 = [
+  // the left whisper field
+  [110, 150, 285, 105],
+  [110, 150, 95, 315],
+  [285, 105, 450, 120],
+  [95, 315, 260, 390],
+];
+const wave2 = [
+  // the mid bridge behind the copy
+  [260, 390, 450, 330],
+  [450, 120, 555, 260],
+  [285, 105, 530, 45],
+  [555, 260, 555, 130]  ,
+];
+const wave3 = [
+  // the web's mass, upper right
+  [555, 130, 695, 65],
+  [695, 65, 845, 105],
+  [845, 105, 780, 195],
+  [695, 65, 735, 200],
+  [735, 200, 780, 195],
+  [555, 260, 735, 200],
+];
+const wave4 = [
+  // the right column and tail
+  [780, 195, 930, 165],
+  [845, 105, 930, 165],
+  [930, 165, 1030, 155],
+  [930, 165, 875, 300],
+  [875, 300, 1030, 285],
+  [1030, 285, 950, 400],
+  [875, 300, 950, 400],
+  [735, 200, 875, 300],
+];
+const dashed = [
+  [260, 390, 735, 200],
+  [1030, 155, 1090, 90],
+];
+const node = (x: number, y: number, r: number) => ({ x, y, r });
+const firstNodes = [
+  node(110, 150, 2.6),
+  node(285, 105, 2.6),
+  node(95, 315, 2.6),
+  node(450, 120, 2.8),
+  node(260, 390, 2.6),
+  node(555, 260, 3),
+];
+const webNodes = [
+  node(555, 130, 3),
+  node(695, 65, 3.5),
+  node(845, 105, 3.5),
+  node(930, 165, 4),
+  node(735, 200, 6),
+  node(780, 195, 3),
+  node(1030, 155, 3),
+  node(875, 300, 3),
+  node(1030, 285, 3),
+  node(950, 400, 3),
+];
+const pulseIndex = 4;
+const glowIndex = 3;
+---
+
+<svg class="hero-art" viewBox="0 0 1120 560" aria-hidden="true" focusable="false" preserveAspectRatio="xMidYMid slice">
+  <g class="hero-art-edges">
+    <g class="hero-wave">
+      {wave1.map(([x1, y1, x2, y2]) => <line class="hero-draw" pathLength="1" x1={x1} y1={y1} x2={x2} y2={y2} />)}
+    </g>
+    <g class="hero-wave">
+      {wave2.map(([x1, y1, x2, y2]) => <line class="hero-draw" pathLength="1" x1={x1} y1={y1} x2={x2} y2={y2} />)}
+    </g>
+    <g class="hero-wave">
+      {wave3.map(([x1, y1, x2, y2]) => <line class="hero-draw" pathLength="1" x1={x1} y1={y1} x2={x2} y2={y2} />)}
+    </g>
+    <g class="hero-wave">
+      {wave4.map(([x1, y1, x2, y2]) => <line class="hero-draw" pathLength="1" x1={x1} y1={y1} x2={x2} y2={y2} />)}
+    </g>
+    <g class="hero-wave hero-wave--dashed">
+      {dashed.map(([x1, y1, x2, y2]) => <line x1={x1} y1={y1} x2={x2} y2={y2} />)}
+    </g>
+  </g>
+  <g class="hero-art-nodes">
+    {firstNodes.map((n) => <circle class="hero-node" cx={n.x} cy={n.y} r={n.r} />)}
+    {webNodes.map((n, k) => (
+      <circle
+        class={k === pulseIndex ? "hero-node hero-node--pulse" : k === glowIndex ? "hero-node hero-node--accent" : "hero-node"}
+        cx={n.x}
+        cy={n.y}
+        r={n.r}
+      />
+    ))}
+  </g>
+</svg>
