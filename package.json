@@ -2,6 +2,7 @@
   "name": "francisco-mateus-portfolio",
   "version": "1.0.0",
   "private": true,
+  "license": "UNLICENSED",
   "type": "module",
   "scripts": {
     "dev": "astro dev",

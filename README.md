@@ -72,3 +72,7 @@ The public CV PDF and the unlinked print route omit the phone number. The site h
 Push to `main`. `.github/workflows/deploy.yml` runs `npm run check:all` in a `check` job first, then builds with `withastro/action@v6` and deploys with `actions/deploy-pages@v5`; a failing check blocks the build and the deploy. In the repository settings, Pages → Build and deployment → Source must be `GitHub Actions`.
 
 The build is static and base-path aware. Verify `dist/sitemap-0.xml` uses `https://intend-dev.github.io/` URLs.
+
+## License
+
+All rights reserved: the source, design, copy, artwork, and built output are the author's personal material. `package.json` marks the package `UNLICENSED`, and `LICENSE` carries the notice; it covers the author's own work only, and the third-party components that ship in the site output carry their own notices (`THIRD_PARTY_NOTICES.md`). GitHub's Terms of Service still let anyone view and fork a public repository within GitHub, so the only way to end public access to the source is to make the repository private. Reuse beyond that needs written permission from the author.
