@@ -1,4 +1,4 @@
-# Francisco Mateus — Portfolio
+# Francisco Mateus: Portfolio
 
 Personal portfolio and project case studies for an Application Specialist working across AI, master data, and Stibo STEP / PIM / MDM.
 
