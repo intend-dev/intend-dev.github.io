@@ -75,4 +75,4 @@ The build is static and base-path aware. Verify `dist/sitemap-0.xml` uses `https
 
 ## License
 
-All rights reserved: the source, design, copy, artwork, and built output are the author's personal material. `package.json` marks the package `UNLICENSED`, and `LICENSE` carries the notice; it covers the author's own work only, and the third-party components that ship in the site output carry their own notices (`THIRD_PARTY_NOTICES.md`). GitHub's Terms of Service still let anyone view and fork a public repository within GitHub, so the only way to end public access to the source is to make the repository private. Reuse beyond that needs written permission from the author.
+All rights reserved. `LICENSE` carries the notice for this repository's own work; `THIRD_PARTY_NOTICES.md` carries the licenses of the third-party code that ships in the site output.

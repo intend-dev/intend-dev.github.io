@@ -73,14 +73,6 @@ SOFTWARE.
 """
 ```
 
-## Used at build time only
-
-These packages run in the build pipeline, are not distributed within the site
-output, and npm supplies them under their own licenses.
-
-| Package | License |
-| --- | --- |
-| @astrojs/sitemap | MIT |
-| @astrojs/check | MIT |
-| typescript | Apache-2.0 |
-| @img/sharp-wasm32 | Apache-2.0 AND LGPL-3.0-or-later AND MIT |
+Build-time tools, including Astro's own bundler and its transitive packages, are
+not distributed in the site output and keep their own licenses, which npm
+ships with each package.
