@@ -118,9 +118,6 @@ const capabilities = [
     <div class="wrap" data-reveal>
       <SectionHeading eyebrow={copy.story.eyebrow} title={copy.story.title} />
       <div class="story">
-        <div class="story-text">
-          {copy.story.paragraphs.map((paragraph) => <p>{paragraph}</p>)}
-        </div>
         <Image
           src={portrait}
           alt="Portrait of Francisco Mateus"
@@ -128,6 +125,10 @@ const capabilities = [
           sizes="(min-width: 900px) 10rem, 80vw"
           class="story-portrait"
         />
+
+        <div class="story-text">
+          {copy.story.paragraphs.map((paragraph) => <p>{paragraph}</p>)}
+        </div>
       </div>
 
       <!-- The About cluster: the story, then its receipts. The menu's About me opens

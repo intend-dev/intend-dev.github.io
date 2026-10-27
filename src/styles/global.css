@@ -775,6 +775,13 @@ svg {
    line and gives the summary its natural lane. The columns sit on the anchor, so the
    frame stays plain. */
 
+@media (max-width: 899px) {
+  /* Keep the card frame full width and shrink the drawing with a fixed inset: the
+     svg keeps its aspect, so nothing is cropped and the spacing stays constant. */
+  .project-card .card-art {
+    padding: 0.5rem 0.75rem;
+  }
+}
 @media (min-width: 900px) {
   .card-link {
     grid-template-columns: clamp(200px, 26%, 300px) minmax(0, 1fr);
@@ -1042,34 +1049,33 @@ svg {
 
 /* Capabilities */
 
-/* The story fills the standard section width with the other sections: prose beside a
-   small portrait track, no air channel, the portrait flush with the right margin at
-   every width (track mirrors the image's own clamp). */
+/* The story fills the standard section width with the other sections: the portrait
+   floats right and the prose wraps around it at desktop widths. */
 
 .story {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) clamp(11rem, 14vw, 12rem);
-  gap: 1.5rem 3rem;
-  align-items: start;
+  display: block;
 }
 
 .story-portrait {
-  width: 100%;
+  float: right;
+  width: clamp(11rem, 14vw, 12rem);
   height: auto;
+  margin: 0.35rem 0 0.75rem 3rem;
   border: var(--line);
   border-radius: 0.75rem;
+  shape-outside: inset(0 round 0.75rem);
+  shape-margin: 1rem;
 }
 
 @media (max-width: 899px) {
-  .story {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  /* The intro reads face-first on a phone: portrait first, centered, then the text. */
+  /* The intro reads face-first on a phone: portrait first, centered, then text. */
   .story-portrait {
-    order: -1;
-    place-self: center;
+    display: block;
+    float: none;
     width: clamp(10rem, 40vw, 16rem);
+    margin: 0 auto clamp(1.5rem, 4vw, 2.5rem);
+    shape-outside: none;
+    shape-margin: 0;
   }
 }
 
@@ -1144,21 +1150,6 @@ svg {
   font-family: var(--mono);
   font-size: var(--step--1);
   overflow-wrap: anywhere;
-}
-
-.copy-button {
-  font-family: var(--mono);
-  font-size: var(--step--1);
-  background: none;
-  border: var(--line);
-  color: var(--muted);
-  padding: 0.25rem 0.6rem;
-  cursor: pointer;
-}
-
-.copy-button:hover {
-  color: var(--ink);
-  border-color: var(--ink);
 }
 
 /* Overview page */
