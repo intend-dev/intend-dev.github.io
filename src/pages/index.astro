@@ -6,7 +6,6 @@ import SectionHeading from '../components/SectionHeading.astro';
 import ProjectCard from '../components/ProjectCard.astro';
 import ContactLinks from '../components/ContactLinks.astro';
 import Fact from '../components/Fact.astro';
-import TagList from '../components/TagList.astro';
 import HeroArt from '../components/HeroArt.astro';
 import portrait from '../assets/francisco-mateus.png';
 import { profile } from '../data/profile';
@@ -54,28 +53,16 @@ const jsonLd = {
 
 const capabilities = [
   {
-    title: 'AI systems',
-    body: 'Retrieval-augmented generation (RAG), agents over MCP, tool-using systems, and the evaluation loops that keep them honest.',
-    tools: ['Python', 'ChromaDB', 'MCP', 'Claude Agent SDK'],
-    proofs: [
-      { label: 'NASA Mission RAG', href: withBase('/work/nasa-mission-rag/') },
-      { label: 'Code Review Orchestrator', href: withBase('/work/code-review-orchestrator/') },
-    ],
+    title: 'Master data',
+    body: 'Stibo STEP, PIM and MDM, business rules, workflows, data modelling, and release packaging.',
   },
   {
     title: 'Evaluation and governance',
     body: 'RAGAS and retrieval metrics, fairness audits, model cards, token and time budgets, and traces that make a run reproducible.',
-    tools: ['RAGAS', 'AIF360', 'pytest'],
-    proofs: [
-      { label: 'NASA Mission RAG', href: withBase('/work/nasa-mission-rag/') },
-      { label: 'Fairness audit', href: withBase('/work/ai-budget-predicter/') },
-    ],
   },
   {
-    title: 'Master data',
-    body: 'Stibo STEP, PIM and MDM, business rules, workflows, data modelling, and release packaging across DEV, TEST, and PROD.',
-    tools: ['Stibo STEP', 'PIM', 'MDM', 'Business Rules'],
-    proofs: [{ label: 'Bosch STEP work', href: withBase('/#experience') }],
+    title: 'AI systems',
+    body: 'Retrieval-augmented generation (RAG), agents over MCP, tool-using systems, and the evaluation loops that keep them honest.',
   },
 ];
 ---
@@ -115,23 +102,12 @@ const capabilities = [
        case-study rows are the exception: their title is the control's only visible label. -->
   <section class="section" id="capabilities">
     <div class="wrap" data-reveal>
-      <SectionHeading title={copy.sections.capabilities} note="Three areas, each linked to the work that proves it." />
+      <SectionHeading title={copy.sections.capabilities} note="Master data, evaluation and governance, and AI systems." />
       <div class="capabilities">
-        {capabilities.map((capability, index) => (
+        {capabilities.map((capability) => (
           <div class="capability">
-            <p class="capability-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</p>
             <h3>{capability.title}</h3>
             <p>{capability.body}</p>
-            <TagList items={capability.tools} />
-            <p class="capability-proof">
-              Proved by{' '}
-              {capability.proofs.map((proof, i) => (
-                <>
-                  {i > 0 ? ', ' : ''}
-                  <a href={proof.href}>{proof.label}</a>
-                </>
-              ))}
-            </p>
           </div>
         ))}
       </div>

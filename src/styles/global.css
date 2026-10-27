@@ -1089,31 +1089,6 @@ svg {
   margin-bottom: 0.6rem;
 }
 
-/* The count and the proof line are the section's only claim of evidence, so they stay
-   micro type: the h3 and the body keep the weight, the number and the links only anchor
-   it. Tools reuse TagList's pills rather than adding a second tag look. */
-.capability-index {
-  font-family: var(--mono);
-  font-size: var(--step--2);
-  letter-spacing: var(--tracking-label);
-  color: var(--muted);
-  margin-bottom: 0.35rem;
-}
-
-.capability .tags {
-  margin-top: 0.75rem;
-}
-
-.capability-proof {
-  font-size: var(--step--1);
-  color: var(--muted);
-  margin-top: 0.7rem;
-}
-
-.capability-proof a {
-  color: var(--ink);
-}
-
 /* Capstone chips */
 
 .chips {
