@@ -776,10 +776,15 @@ svg {
    frame stays plain. */
 
 @media (max-width: 899px) {
-  /* Keep the card frame full width and shrink the drawing with a fixed inset: the
-     svg keeps its aspect, so nothing is cropped and the spacing stays constant. */
+  /* Give every card art one phone band: a fixed height, a same inset, and a
+     centered aspect-preserving drawing. The diagram scales inside the band, so the
+     art sections stay the same size without cropping anything. */
   .project-card .card-art {
-    padding: 0.5rem 0.75rem;
+    height: clamp(10rem, 48vw, 12rem);
+    padding: 1rem;
+    place-self: center;
+    width: auto;
+    max-width: 100%;
   }
 }
 @media (min-width: 900px) {
