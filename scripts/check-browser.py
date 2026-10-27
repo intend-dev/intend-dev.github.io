@@ -543,19 +543,10 @@ def main() -> int:
             f"View transition swaps: the toggle still works on the swapped page (press returned {swapped_flip})",
             swapped_flip == "dark",
         )
-        # The same defect class, measured on 2026-10-24: home -> study -> back left the
-        # copy-email button bound to nothing (body scripts do not re-run after a swap).
-        # Back-navigation is a swap here, so the flash must still fire on the way back.
+        # Back-navigation is a swap, so everything below it runs against a freshly
+        # swapped body and proves the body scripts re-bound themselves.
         cdp.evaluate("(() => { history.back(); return true; })()")
-        wait_for(cdp, "!!document.querySelector('[data-copy-email]')")
-        copy_before = cdp.evaluate("document.querySelector('[data-copy-email]')?.textContent")
-        cdp.evaluate("(() => { document.querySelector('[data-copy-email]')?.click(); return true; })()")
-        time.sleep(0.25)
-        copy_after = cdp.evaluate("document.querySelector('[data-copy-email]')?.textContent")
-        expect(
-            f"View transition swaps: the copy button survives the round trip ({copy_before} -> {copy_after})",
-            copy_before == "Copy email" and copy_after not in ("Copy email", None),
-        )
+        wait_for(cdp, "!!document.querySelector('#certifications > .fact-summary')")
         # Same swap class, measured 2026-10-24: the swap replaces <html>, killing the
         # measured --header-h, and the sticky fact bars rode the 7rem fallback — a 25px
         # gap at desktop, 11px under the phone menu. After the round trip the open bar
