@@ -38,11 +38,19 @@ export const experience = [
     ]
   },
   {
-    "company": "Cooperativa António Sérgio, Introsys, Portugal Telecom",
+    "company": "Cooperativa António Sérgio, Portugal Telecom",
     "role": "Earlier experience",
     "period": "Oct 2013 to Jul 2017",
     "bullets": [
-      "IT and web support (Joomla content and page layouts), industrial robot maintenance, and end-user technical support."
+      "IT and web support (Joomla content and page layouts) and end-user technical support."
+    ]
+  },
+  {
+    "company": "Introsys",
+    "role": "Automation and Robotic Technician",
+    "period": "Jan 2014 to Aug 2014",
+    "bullets": [
+      "Preemptive maintenance of industrial robots and electronic components."
     ]
   }
 ] as const;
