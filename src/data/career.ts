@@ -8,10 +8,12 @@ export const experience = [
     "location": "Warsaw, Poland",
     "period": "Aug 2024 to present",
     "bullets": [
-      "Stibo STEP developer and platform specialist across two Bosch divisions, Power Tools then Mobile Aftermarket.",
-      "Lifted product-number accuracy across a region, sub-region, and country hierarchy by designing sales-channel and commodity-code exclusion logic, cutting misrouted assortment entries for the Mobile Aftermarket division.",
-      "Improved reviewer control over product data by designing Business Rules and Business Actions for object lifecycle, reference management, and attribute-approval workflows, including partial-approval logic for references and values.",
-      "Reduced duplicated, fragile wizard behaviour by refactoring monolithic WebUI Business Rules into reusable library functions, giving multi-step product-creation screens one consistent, screen-specific validation source."
+      "Build and maintain the Stibo STEP platform Bosch uses as the single source of truth for product information, first for Power Tools and then for Mobile Aftermarket.",
+      "Raised product-number accuracy across a region, sub-region, and country hierarchy by designing exclusion rules for sales channels and for product classification codes, cutting products listed in the wrong markets for Mobile Aftermarket.",
+      "Improved reviewer control with Business Rules and Business Actions for lifecycle, links, and partial approval.",
+      "Reorganised duplicated, fragile Web UI Business Rules into library functions, one validation source per screen.",
+      "Cut release risk by packaging Business Rule changes and moving them through development, test, and production, with regression tests written before deployment so the released package was tested as a whole.",
+      "Removed repeated manual cleanup by building Excel and JavaScript tools that harmonise lists of allowed field values, assign product fields to the right classes, and move image and document links onto the correct product records across the product-data hierarchy."
     ]
   },
   {
