@@ -18,46 +18,31 @@ export const experience = [
   },
   {
     "company": "Sii Poland",
-    "role": "Software Engineer - ServiceNow ITSM",
+    "role": "Software Engineer (ServiceNow | JavaScript)",
     "period": "Jan 2022 to May 2024",
     "bullets": [
-      "Managed and optimised IT Service Management (ITSM) processes in ServiceNow, ensuring efficient incident, problem, and change management across the organisation.",
-      "Effectively implemented and documented software changes, modifications, and optimisations in alignment with the product life cycle analysis, supporting ongoing projects within an Agile-driven environment."
+      "Configured and improved incident, problem, and change management processes on ServiceNow for client projects.",
+      "Wrote server- and client-side JavaScript to build and change platform features on ServiceNow.",
+      "Implemented and documented software changes, modifications, and optimisations through the product life cycle in an Agile team.",
+      "Coordinated changes with client stakeholders through change management, keeping progress and feedback visible."
     ]
   },
   {
     "company": "Fujitsu Poland",
-    "role": "Application Developer - ServiceNow ITSM",
+    "role": "Application Developer (ServiceNow | JavaScript)",
     "period": "Jun 2018 to Dec 2021",
     "bullets": [
-      "Built new applications with HTML, CSS, and JavaScript against ServiceNow best practices.",
-      "Created software applications in a test-driven development (TDD) environment.",
-      "Worked in Agile delivery to maintain project timelines and resourcing."
+      "Built new ServiceNow applications in HTML, CSS, and JavaScript, following the platform's development best practices.",
+      "Developed applications test-first (test-driven development), writing the tests before the code.",
+      "Delivered in Agile teams, helping keep project timelines and resourcing on track."
     ]
   },
   {
-    "company": "Cooperativa António Sérgio para a Economia Social",
-    "role": "IT and Web Support",
-    "period": "Sep 2014 to Jul 2017",
+    "company": "Cooperativa António Sérgio, Introsys, Portugal Telecom",
+    "role": "Earlier experience",
+    "period": "Oct 2013 to Jul 2017",
     "bullets": [
-      "Designed and implemented layouts for usability and performance against UI/UX best practices.",
-      "Created and maintained content in the Joomla platform."
-    ]
-  },
-  {
-    "company": "Introsys - Global Control Systems Designers",
-    "role": "Automation and Robotic Technician",
-    "period": "Jan 2014 to Aug 2014",
-    "bullets": [
-      "Preemptive maintenance of industrial robots and electronic components."
-    ]
-  },
-  {
-    "company": "Portugal Telecom",
-    "role": "Technical Support",
-    "period": "Oct 2013 to Jan 2014",
-    "bullets": [
-      "Provided technical support to end-users."
+      "IT and web support (Joomla content and page layouts), industrial robot maintenance, and end-user technical support."
     ]
   }
 ] as const;
