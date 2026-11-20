@@ -1,7 +1,7 @@
 export const profile = {
   name: 'Francisco Mateus',
   role: 'Application Specialist · AI and Master Data',
-  cvTitle: 'Application Specialist | AI and Master Data (Stibo STEP Certified | JavaScript)',
+  cvTitle: 'MDM / PIM Consultant | Stibo STEP Certified | AI',
   location: 'Łódź, Poland',
   countryCode: 'PL',
   employer: 'Bosch Digital',

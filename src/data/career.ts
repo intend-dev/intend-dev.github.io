@@ -223,7 +223,7 @@ export const education = [
   }
 ] as const;
 
-export const cvSummary = "Application Specialist at Bosch, working on Stibo STEP product data. Looking for AI engineering roles where clean data and auditable systems matter.";
+export const cvSummary = "Certified Stibo STEP consultant with 8+ years building enterprise platforms in JavaScript. At Bosch I design the rules, workflows, and checks that keep product data accurate across regions and countries, after six years of platform development. I am completing an MSc in Artificial Intelligence, and I am open to MDM, PIM, and Stibo roles where data quality and auditable systems matter, including work that combines master data with AI.";
 
 export const cvProjects = [
   {
